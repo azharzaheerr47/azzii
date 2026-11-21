@@ -217,3 +217,27 @@ export function resolveSafeLocalMediaPath(filename: string): string | null {
   }
   return resolved;
 }
+
+export async function pingCloudinary(): Promise<{
+  configured: boolean;
+  connected: boolean;
+  error?: string;
+}> {
+  if (!isCloudinaryConfigured()) {
+    return { configured: false, connected: false };
+  }
+  try {
+    configureCloudinary();
+    const res = await cloudinary.api.ping();
+    return { configured: true, connected: res?.status === 'ok' };
+  } catch (err: unknown) {
+    const msg =
+      (err as { error?: { message?: string }; message?: string })?.error?.message ||
+      (err instanceof Error ? err.message : 'Cloudinary ping failed');
+    return {
+      configured: true,
+      connected: false,
+      error: msg,
+    };
+  }
+}

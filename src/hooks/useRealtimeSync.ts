@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RealtimeEvent } from '../types/index';
+import { getMemorySessionToken } from '../utils/apiClient';
 
 export type SyncConnectionState = 'connecting' | 'connected' | 'reconnecting';
 
@@ -72,7 +73,8 @@ export function useRealtimeSync(
       const wsUrl = `${protocol}//${window.location.host}/ws`;
 
       try {
-        ws = new WebSocket(wsUrl);
+        const token = getMemorySessionToken();
+        ws = token ? new WebSocket(wsUrl, ['ols-auth', token]) : new WebSocket(wsUrl);
       } catch {
         startSseFallback();
         return;

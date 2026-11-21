@@ -94,9 +94,15 @@ export function verifySessionToken(token: string | undefined | null): SessionPay
 function isSecureRequest(req: Request): boolean {
   const forwardedProto = req.headers['x-forwarded-proto'];
   if (typeof forwardedProto === 'string') {
-    return forwardedProto.split(',')[0].trim() === 'https';
+    if (forwardedProto.split(',')[0].trim().toLowerCase() === 'https') return true;
+  } else if (Array.isArray(forwardedProto) && forwardedProto[0]?.toLowerCase().includes('https')) {
+    return true;
   }
-  return req.secure;
+  const origin = req.headers.origin;
+  if (typeof origin === 'string' && origin.startsWith('https://')) {
+    return true;
+  }
+  return req.secure || req.protocol === 'https';
 }
 
 export function setSessionCookie(req: Request, res: Response, token: string): void {
@@ -138,4 +144,13 @@ export function parseCookieToken(cookieHeader: string | undefined): string | nul
     }
   }
   return null;
+}
+
+export function extractAuthToken(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    const bearer = authHeader.slice(7).trim();
+    if (bearer) return bearer;
+  }
+  return parseCookieToken(req.headers.cookie);
 }

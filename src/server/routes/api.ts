@@ -13,7 +13,7 @@ import {
 import type { PublicUser } from '../../types/index';
 import {
   clearSessionCookie,
-  parseCookieToken,
+  extractAuthToken,
   setSessionCookie,
   signSessionToken,
   verifySessionToken,
@@ -36,9 +36,11 @@ import {
 } from '../db/store';
 import {
   deleteStoredImage,
+  pingCloudinary,
   resolveSafeLocalMediaPath,
   storeImageBuffer,
 } from '../media/imageService';
+import { pingMongoDB } from '../models/mongooseModels';
 import { realtimeHub } from '../realtime/hub';
 
 interface AuthedRequest extends Request {
@@ -99,7 +101,7 @@ function verifyCsrf(req: Request, res: Response, next: NextFunction): void {
 }
 
 async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction): Promise<void> {
-  const token = parseCookieToken(req.headers.cookie);
+  const token = extractAuthToken(req);
   const payload = verifySessionToken(token);
   if (!payload) {
     res.status(401).json({ error: 'Authentication required.' });
@@ -127,11 +129,24 @@ export function createApiRouter(): express.Router {
 
   router.use(verifyCsrf);
 
+  // Health check for MongoDB Atlas & Cloudinary connectivity (no secrets exposed)
+  router.get('/health', async (_req, res) => {
+    const [mongodb, cloudinary] = await Promise.all([pingMongoDB(), pingCloudinary()]);
+    const ok =
+      (!mongodb.configured || mongodb.connected) &&
+      (!cloudinary.configured || cloudinary.connected);
+    res.status(ok ? 200 : 503).json({
+      ok,
+      mongodb,
+      cloudinary,
+    });
+  });
+
   // Public space initialization status (no user details exposed)
   router.get('/auth/status', async (req, res) => {
     try {
       const status = await getSpaceStatus();
-      const token = parseCookieToken(req.headers.cookie);
+      const token = extractAuthToken(req);
       const payload = verifySessionToken(token);
       const authedUser = payload ? await getUserById(payload.sub) : null;
       res.json({ ...status, authenticated: Boolean(authedUser) });
@@ -152,7 +167,7 @@ export function createApiRouter(): express.Router {
       const { user, inviteCode } = await createFounderAccount(parsed.data);
       const token = signSessionToken(user.id, user.role);
       setSessionCookie(req, res, token);
-      res.status(201).json({ user, inviteCode });
+      res.status(201).json({ user, inviteCode, sessionToken: token });
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg === 'SPACE_ALREADY_INITIALIZED') {
@@ -176,7 +191,7 @@ export function createApiRouter(): express.Router {
       const token = signSessionToken(user.id, user.role);
       setSessionCookie(req, res, token);
       realtimeHub.broadcast({ type: 'user:updated', payload: user });
-      res.status(201).json({ user });
+      res.status(201).json({ user, sessionToken: token });
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg === 'SPACE_FULL') {
@@ -211,7 +226,7 @@ export function createApiRouter(): express.Router {
       }
       const token = signSessionToken(user.id, user.role);
       setSessionCookie(req, res, token);
-      res.json({ user });
+      res.json({ user, sessionToken: token });
     } catch {
       res.status(500).json({ error: 'Sign in failed.' });
     }

@@ -136,15 +136,43 @@ export async function connectMongoDB(uri: string): Promise<typeof mongoose> {
     globalWithMongoose.__mongooseCache = { conn: null, promise: null };
   }
   const cache = globalWithMongoose.__mongooseCache;
-  if (cache.conn) {
+  if (cache.conn && mongoose.connection.readyState === 1) {
     return cache.conn;
   }
   if (!cache.promise) {
-    cache.promise = mongoose.connect(uri, {
-      bufferCommands: false,
-      maxPoolSize: 10,
-    });
+    cache.promise = mongoose
+      .connect(uri, {
+        bufferCommands: false,
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 8000,
+      })
+      .catch((err) => {
+        cache.promise = null;
+        throw err;
+      });
   }
   cache.conn = await cache.promise;
   return cache.conn;
+}
+
+export async function pingMongoDB(): Promise<{
+  configured: boolean;
+  connected: boolean;
+  error?: string;
+}> {
+  const uri = process.env.MONGODB_URI?.trim();
+  if (!uri) {
+    return { configured: false, connected: false };
+  }
+  try {
+    const conn = await connectMongoDB(uri);
+    await conn.connection.db?.admin().ping();
+    return { configured: true, connected: true };
+  } catch (err) {
+    return {
+      configured: true,
+      connected: false,
+      error: err instanceof Error ? err.message : 'MongoDB connection failed',
+    };
+  }
 }

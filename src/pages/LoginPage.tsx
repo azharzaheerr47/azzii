@@ -9,7 +9,7 @@ import { useToast } from '../components/ui/ToastProvider';
 
 interface LoginPageProps {
   status: SpaceStatus;
-  onAuthenticated: (user: PublicUser, createdInviteCode?: string) => void;
+  onAuthenticated: (user: PublicUser, createdInviteCode?: string) => Promise<void>;
 }
 
 const AVATAR_CHOICES: { id: AvatarPreset; label: string }[] = [
@@ -49,8 +49,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ status, onAuthenticated })
     try {
       if (activeMode === 'setup') {
         const res = await api.setupFounder({ name, email, password, avatarPreset });
+        await onAuthenticated(res.user, res.inviteCode);
         showToast('Your private space is ready.', 'success');
-        onAuthenticated(res.user, res.inviteCode);
       } else if (activeMode === 'invite') {
         const res = await api.redeemInvite({
           inviteCode,
@@ -59,12 +59,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ status, onAuthenticated })
           password,
           avatarPreset,
         });
+        await onAuthenticated(res.user);
         showToast('Welcome to Our Little Space.', 'success');
-        onAuthenticated(res.user);
       } else {
         const res = await api.login({ email, password });
+        await onAuthenticated(res.user);
         showToast(`Welcome back, ${res.user.name}.`, 'success');
-        onAuthenticated(res.user);
       }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong.');

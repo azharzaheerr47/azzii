@@ -15,7 +15,10 @@ class RealtimeHub {
 
   attach(server: HttpServer): void {
     if (this.wss) return;
-    this.wss = new WebSocketServer({ noServer: true });
+    this.wss = new WebSocketServer({
+      noServer: true,
+      handleProtocols: (protocols) => (protocols.has('ols-auth') ? 'ols-auth' : false),
+    });
 
     server.on('upgrade', (req: IncomingMessage, socket, head) => {
       const url = req.url || '';
@@ -23,7 +26,18 @@ class RealtimeHub {
         return; // Allow Vite/other handlers if any
       }
 
-      const token = parseCookieToken(req.headers.cookie);
+      let token: string | null = null;
+      const protoHeader = req.headers['sec-websocket-protocol'];
+      if (typeof protoHeader === 'string') {
+        const parts = protoHeader.split(',').map((s) => s.trim());
+        if (parts[0] === 'ols-auth' && parts[1]) {
+          token = parts[1];
+        }
+      }
+      if (!token) {
+        token = parseCookieToken(req.headers.cookie);
+      }
+
       const session = verifySessionToken(token);
       if (!session) {
         socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');

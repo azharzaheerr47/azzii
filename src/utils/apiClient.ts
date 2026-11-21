@@ -13,12 +13,21 @@ const BASE_HEADERS: Record<string, string> = {
   'X-Requested-With': 'XMLHttpRequest',
 };
 
+// Held strictly in JS memory (never localStorage/sessionStorage) so embedded iframes
+// that block third-party cookies remain authenticated seamlessly alongside HttpOnly cookies.
+let memorySessionToken: string | null = null;
+
+export function getMemorySessionToken(): string | null {
+  return memorySessionToken;
+}
+
 async function requestJson<T>(url: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(url, {
     ...options,
     credentials: 'include',
     headers: {
       ...BASE_HEADERS,
+      ...(memorySessionToken ? { Authorization: `Bearer ${memorySessionToken}` } : {}),
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers || {}),
     },
@@ -42,36 +51,54 @@ export interface SessionContextData {
 export const api = {
   getAuthStatus: () => requestJson<SpaceStatus>('/api/auth/status'),
 
-  setupFounder: (payload: {
+  setupFounder: async (payload: {
     name: string;
     email: string;
     password: string;
     avatarPreset: AvatarPreset;
-  }) =>
-    requestJson<{ user: PublicUser; inviteCode: string }>('/api/auth/setup', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
+  }) => {
+    const res = await requestJson<{ user: PublicUser; inviteCode: string; sessionToken?: string }>(
+      '/api/auth/setup',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    );
+    if (res.sessionToken) memorySessionToken = res.sessionToken;
+    return res;
+  },
 
-  redeemInvite: (payload: {
+  redeemInvite: async (payload: {
     inviteCode: string;
     name: string;
     email: string;
     password: string;
     avatarPreset: AvatarPreset;
-  }) =>
-    requestJson<{ user: PublicUser }>('/api/auth/redeem-invite', {
+  }) => {
+    const res = await requestJson<{ user: PublicUser; sessionToken?: string }>(
+      '/api/auth/redeem-invite',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    );
+    if (res.sessionToken) memorySessionToken = res.sessionToken;
+    return res;
+  },
+
+  login: async (payload: { email: string; password: string }) => {
+    const res = await requestJson<{ user: PublicUser; sessionToken?: string }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(payload),
-    }),
+    });
+    if (res.sessionToken) memorySessionToken = res.sessionToken;
+    return res;
+  },
 
-  login: (payload: { email: string; password: string }) =>
-    requestJson<{ user: PublicUser }>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-
-  logout: () => requestJson<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
+  logout: async () => {
+    memorySessionToken = null;
+    return requestJson<{ ok: boolean }>('/api/auth/logout', { method: 'POST' });
+  },
 
   getMe: () => requestJson<SessionContextData>('/api/auth/me'),
 
@@ -151,6 +178,9 @@ export const api = {
       xhr.open('POST', '/api/upload');
       xhr.withCredentials = true;
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      if (memorySessionToken) {
+        xhr.setRequestHeader('Authorization', `Bearer ${memorySessionToken}`);
+      }
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {
