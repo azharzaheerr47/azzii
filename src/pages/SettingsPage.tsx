@@ -1,0 +1,366 @@
+import React, { useState } from 'react';
+import { Check, Copy, RefreshCw, ShieldCheck } from 'lucide-react';
+import type { AvatarPreset, PublicUser, SpaceSettings, SpaceStatus } from '../types/index';
+import { api } from '../utils/apiClient';
+import { SpaceBrandMark } from '../components/artwork/CatDuoIllustration';
+import { PartnerAvatar } from '../components/artwork/PartnerAvatar';
+import { useToast } from '../components/ui/ToastProvider';
+
+interface SettingsPageProps {
+  user: PublicUser;
+  members: PublicUser[];
+  space: SpaceSettings;
+  status: SpaceStatus;
+  onSpaceUpdated: (space: SpaceSettings) => void;
+  onUserUpdated: (user: PublicUser) => void;
+  onLogout: () => void;
+}
+
+const AVATAR_CHOICES: { id: AvatarPreset; label: string }[] = [
+  { id: 'bat-cat', label: 'Bat Cat' },
+  { id: 'bow-cat', label: 'Bow Cat' },
+  { id: 'lavender', label: 'Lavender' },
+  { id: 'blush', label: 'Blush' },
+  { id: 'sky', label: 'Sky' },
+];
+
+const LOGO_CHOICES: { id: 'cat-duo' | 'heart' | 'moon'; label: string }[] = [
+  { id: 'cat-duo', label: 'Cat Duo' },
+  { id: 'heart', label: 'Pastel Heart' },
+  { id: 'moon', label: 'Cozy Moon' },
+];
+
+export const SettingsPage: React.FC<SettingsPageProps> = ({
+  user,
+  members,
+  space,
+  status,
+  onSpaceUpdated,
+  onUserUpdated,
+  onLogout,
+}) => {
+  const { showToast } = useToast();
+
+  // Space form state
+  const [spaceName, setSpaceName] = useState(space.spaceName);
+  const [tagline, setTagline] = useState(space.tagline);
+  const [welcomeMessage, setWelcomeMessage] = useState(space.welcomeMessage);
+  const [logoStyle, setLogoStyle] = useState<'cat-duo' | 'heart' | 'moon'>(space.logoStyle);
+  const [savingSpace, setSavingSpace] = useState(false);
+
+  // Profile form state
+  const [displayName, setDisplayName] = useState(user.name);
+  const [avatarPreset, setAvatarPreset] = useState<AvatarPreset>(user.avatarPreset);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // Invite state
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [rotatingInvite, setRotatingInvite] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleSaveSpace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSpace(true);
+    try {
+      const res = await api.updateSpace({
+        spaceName,
+        tagline,
+        welcomeMessage,
+        logoStyle,
+      });
+      onSpaceUpdated(res.space);
+      showToast('Space settings saved.', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to save space settings.', 'error');
+    } finally {
+      setSavingSpace(false);
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    try {
+      const res = await api.updateProfile({
+        name: displayName,
+        avatarPreset,
+      });
+      onUserUpdated(res.user);
+      showToast('Profile updated.', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to update profile.', 'error');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleRotateInvite = async () => {
+    setRotatingInvite(true);
+    try {
+      const res = await api.rotateInvite();
+      setInviteCode(res.inviteCode);
+      showToast('New partner invite code created.', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not rotate invite code.', 'error');
+    } finally {
+      setRotatingInvite(false);
+    }
+  };
+
+  const copyCode = async () => {
+    if (!inviteCode) return;
+    await navigator.clipboard.writeText(inviteCode).catch(() => undefined);
+    setCopied(true);
+    showToast('Invite code copied.', 'success');
+    window.setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="max-w-3xl space-y-8">
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-[#29253A]">
+          Space Settings
+        </h1>
+        <p className="mt-1 text-sm text-[#645E7B]">
+          Customize your shared sanctuary, personal profile, and two-person access.
+        </p>
+      </div>
+
+      {/* Space Customization */}
+      <section className="bg-white border border-[#6554A4]/14 rounded-2xl p-6">
+        <h2 className="font-display text-lg font-semibold text-[#29253A]">
+          Customize Shared Space
+        </h2>
+        <p className="mt-0.5 text-xs text-[#645E7B]">
+          Changes sync immediately for both of you.
+        </p>
+
+        <form onSubmit={handleSaveSpace} className="mt-5 space-y-4">
+          <div>
+            <label
+              htmlFor="settings-space-name"
+              className="block text-xs font-medium text-[#29253A] mb-1.5"
+            >
+              Space name
+            </label>
+            <input
+              id="settings-space-name"
+              type="text"
+              required
+              maxLength={48}
+              value={spaceName}
+              onChange={(e) => setSpaceName(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/25"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="settings-welcome-message"
+              className="block text-xs font-medium text-[#29253A] mb-1.5"
+            >
+              Dashboard welcome message
+            </label>
+            <textarea
+              id="settings-welcome-message"
+              rows={2}
+              required
+              maxLength={240}
+              value={welcomeMessage}
+              onChange={(e) => setWelcomeMessage(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/25"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="settings-tagline"
+              className="block text-xs font-medium text-[#29253A] mb-1.5"
+            >
+              Subtitle
+            </label>
+            <input
+              id="settings-tagline"
+              type="text"
+              maxLength={100}
+              value={tagline}
+              onChange={(e) => setTagline(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/25"
+            />
+          </div>
+
+          <div>
+            <span className="block text-xs font-medium text-[#29253A] mb-2">Logo mark</span>
+            <div className="flex flex-wrap gap-2.5">
+              {LOGO_CHOICES.map((choice) => (
+                <button
+                  key={choice.id}
+                  type="button"
+                  onClick={() => setLogoStyle(choice.id)}
+                  aria-pressed={logoStyle === choice.id}
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
+                    logoStyle === choice.id
+                      ? 'bg-[#E9DFFF]/70 border-[#6554A4] text-[#29253A]'
+                      : 'bg-white border-[#6554A4]/15 text-[#645E7B] hover:border-[#6554A4]/40'
+                  }`}
+                >
+                  <SpaceBrandMark style={choice.id} className="w-6 h-6" />
+                  <span className="whitespace-nowrap">{choice.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={savingSpace}
+              className="px-4 py-2 rounded-xl bg-[#6554A4] hover:bg-[#534391] text-white text-sm font-medium transition-colors disabled:opacity-60"
+            >
+              {savingSpace ? 'Saving...' : 'Save space settings'}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {/* Personal Profile */}
+      <section className="bg-white border border-[#6554A4]/14 rounded-2xl p-6">
+        <h2 className="font-display text-lg font-semibold text-[#29253A]">Your Profile</h2>
+        <form onSubmit={handleSaveProfile} className="mt-5 space-y-4">
+          <div>
+            <label
+              htmlFor="settings-display-name"
+              className="block text-xs font-medium text-[#29253A] mb-1.5"
+            >
+              Display name
+            </label>
+            <input
+              id="settings-display-name"
+              type="text"
+              required
+              maxLength={40}
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/25"
+            />
+          </div>
+
+          <div>
+            <span className="block text-xs font-medium text-[#29253A] mb-2">Avatar style</span>
+            <div className="flex flex-wrap gap-2.5">
+              {AVATAR_CHOICES.map((choice) => (
+                <button
+                  key={choice.id}
+                  type="button"
+                  onClick={() => setAvatarPreset(choice.id)}
+                  aria-pressed={avatarPreset === choice.id}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
+                    avatarPreset === choice.id
+                      ? 'bg-[#E9DFFF]/70 border-[#6554A4] text-[#29253A]'
+                      : 'bg-white border-[#6554A4]/15 text-[#645E7B] hover:border-[#6554A4]/40'
+                  }`}
+                >
+                  <PartnerAvatar name={displayName || choice.label} preset={choice.id} size="xs" />
+                  <span className="whitespace-nowrap">{choice.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={savingProfile}
+              className="px-4 py-2 rounded-xl bg-[#6554A4] hover:bg-[#534391] text-white text-sm font-medium transition-colors disabled:opacity-60"
+            >
+              {savingProfile ? 'Updating...' : 'Save profile'}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {/* Two-Person Privacy & Members */}
+      <section className="bg-white border border-[#6554A4]/14 rounded-2xl p-6 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-[#29253A]">
+              Private Two-Person Access
+            </h2>
+            <p className="mt-0.5 text-xs text-[#645E7B]">
+              {status.userCount} of {status.maxUsers} authorized accounts registered.
+              {status.userCount === 2 && ' New registrations are permanently closed.'}
+            </p>
+          </div>
+          <ShieldCheck className="w-5 h-5 text-[#6554A4] shrink-0" />
+        </div>
+
+        <div className="divide-y divide-[#6554A4]/10 border-t border-[#6554A4]/10">
+          {members.map((m) => (
+            <div key={m.id} className="py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <PartnerAvatar
+                  name={m.name}
+                  preset={m.avatarPreset}
+                  avatarUrl={m.avatar}
+                  size="sm"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[#29253A] truncate">
+                    {m.name} {m.id === user.id ? '(You)' : ''}
+                  </p>
+                  <p className="text-xs text-[#645E7B] truncate">{m.email}</p>
+                </div>
+              </div>
+              <span className="text-xs text-[#645E7B] capitalize shrink-0">{m.role}</span>
+            </div>
+          ))}
+        </div>
+
+        {status.userCount < status.maxUsers && (
+          <div className="pt-2 border-t border-[#6554A4]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <p className="text-xs text-[#645E7B]">
+              Generate a one-time 7-day invite code for your partner to claim seat 2.
+            </p>
+            <div className="flex items-center gap-2 shrink-0">
+              {inviteCode && (
+                <>
+                  <code className="px-3 py-1.5 rounded-xl bg-[#FAF9FE] border border-[#6554A4]/20 text-xs font-semibold tracking-wider text-[#29253A] tabular-nums">
+                    {inviteCode}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyCode}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#6554A4]/20 text-xs font-medium text-[#29253A] hover:bg-[#FAF9FE]"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copied ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                disabled={rotatingInvite}
+                onClick={handleRotateInvite}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#6554A4] text-white text-xs font-medium hover:bg-[#534391] disabled:opacity-60 whitespace-nowrap"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>{inviteCode ? 'New code' : 'Generate invite'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Sign out */}
+      <div className="flex items-center justify-end pt-2">
+        <button
+          type="button"
+          onClick={onLogout}
+          className="px-4 py-2 rounded-xl border border-[#6554A4]/20 text-sm font-medium text-[#29253A] hover:bg-white transition-colors"
+        >
+          Sign out
+        </button>
+      </div>
+    </div>
+  );
+};

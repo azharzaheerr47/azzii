@@ -1,0 +1,6 @@
+{
+  "name": "Our Little Space",
+  "description": "A private shared journal, notes, photo memories, and illustrated sticker space designed exclusively for two people.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

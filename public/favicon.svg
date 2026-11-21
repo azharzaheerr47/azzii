@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E9DFFF" />
+      <stop offset="55%" stop-color="#FFD6E7" />
+      <stop offset="100%" stop-color="#D8E9FF" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="32" fill="url(#bgGrad)" />
+  <!-- Subtle ground cushion -->
+  <ellipse cx="64" cy="102" rx="44" ry="10" fill="#FFFFFF" fill-opacity="0.65" />
+
+  <!-- Cat 1: Bat-Cat (Left) -->
+  <!-- Tail -->
+  <path d="M24 92 C14 90 12 78 19 73" stroke="#29253A" stroke-width="5" stroke-linecap="round" fill="none" />
+  <!-- Body -->
+  <path d="M24 98 C24 76 31 66 43 66 C55 66 61 76 61 98 Z" fill="#29253A" />
+  <!-- Chest soft patch -->
+  <ellipse cx="42.5" cy="86" rx="8" ry="10" fill="#3D3756" />
+  <!-- Head / Bat Cowl -->
+  <path d="M23 52 C23 36 33 30 43 30 C53 30 62 36 62 52 C62 63 54 69 43 69 C32 69 23 63 23 52 Z" fill="#29253A" />
+  <!-- Pointed Bat Ears -->
+  <path d="M24 44 L22 20 L37 33 Z" fill="#29253A" />
+  <path d="M61 44 L63 20 L48 33 Z" fill="#29253A" />
+  <path d="M26 39 L25 26 L34 34 Z" fill="#4E466E" />
+  <path d="M59 39 L60 26 L51 34 Z" fill="#4E466E" />
+  <!-- Lower muzzle cutout -->
+  <path d="M31 54 C31 49 54 49 54 54 C54 63 49 67 42.5 67 C36 67 31 63 31 54 Z" fill="#EDEAF8" />
+  <!-- Expressive Eyes -->
+  <ellipse cx="35" cy="48" rx="3.4" ry="3.8" fill="#FFD97D" />
+  <ellipse cx="50" cy="48" rx="3.4" ry="3.8" fill="#FFD97D" />
+  <circle cx="35.8" cy="47.2" r="1.2" fill="#29253A" />
+  <circle cx="50.8" cy="47.2" r="1.2" fill="#29253A" />
+  <!-- Tiny nose & gentle smile -->
+  <polygon points="41,55 44,55 42.5,57.5" fill="#FF8FB8" />
+  <path d="M39.5 59 Q42.5 62 45.5 59" stroke="#29253A" stroke-width="1.8" stroke-linecap="round" fill="none" />
+
+  <!-- Cat 2: Bow-Cat (Right) -->
+  <!-- Tail -->
+  <path d="M103 93 C112 91 114 80 107 75" stroke="#29253A" stroke-width="4.5" stroke-linecap="round" fill="none" />
+  <!-- Body -->
+  <path d="M67 98 C67 77 73 67 85 67 C97 67 103 77 103 98 Z" fill="#FFFFFF" stroke="#29253A" stroke-width="3" stroke-linejoin="round" />
+  <!-- Little pink collar -->
+  <path d="M74 71 Q85 75 96 71" stroke="#FF8FB8" stroke-width="3.5" stroke-linecap="round" fill="none" />
+  <!-- Ears -->
+  <path d="M68 44 L67 24 L80 35 Z" fill="#FFFFFF" stroke="#29253A" stroke-width="3" stroke-linejoin="round" />
+  <path d="M102 44 L103 24 L90 35 Z" fill="#FFFFFF" stroke="#29253A" stroke-width="3" stroke-linejoin="round" />
+  <!-- Head -->
+  <ellipse cx="85" cy="51" rx="20" ry="17" fill="#FFFFFF" stroke="#29253A" stroke-width="3" />
+  <!-- Pink Hello-Kitty-inspired Bow -->
+  <g transform="translate(97, 32) rotate(18)">
+    <ellipse cx="-6" cy="0" rx="6" ry="4.5" fill="#FF8FB8" stroke="#29253A" stroke-width="2.2" />
+    <ellipse cx="6" cy="0" rx="6" ry="4.5" fill="#FF8FB8" stroke="#29253A" stroke-width="2.2" />
+    <circle cx="0" cy="0" r="3.2" fill="#FF5D9E" stroke="#29253A" stroke-width="2.2" />
+  </g>
+  <!-- Eyes & Blush -->
+  <circle cx="77.5" cy="50" r="2.6" fill="#29253A" />
+  <circle cx="92.5" cy="50" r="2.6" fill="#29253A" />
+  <circle cx="78.3" cy="49" r="0.9" fill="#FFFFFF" />
+  <circle cx="93.3" cy="49" r="0.9" fill="#FFFFFF" />
+  <ellipse cx="72.5" cy="55.5" rx="3.5" ry="2" fill="#FFD6E7" />
+  <ellipse cx="97.5" cy="55.5" rx="3.5" ry="2" fill="#FFD6E7" />
+  <!-- Nose & Whiskers -->
+  <ellipse cx="85" cy="54" rx="2.2" ry="1.6" fill="#FFB238" />
+  <path d="M82 57.5 Q85 60 88 57.5" stroke="#29253A" stroke-width="1.8" stroke-linecap="round" fill="none" />
+  <line x1="63" y1="50" x2="69" y2="51" stroke="#29253A" stroke-width="1.8" stroke-linecap="round" />
+  <line x1="63" y1="55" x2="69" y2="54.5" stroke="#29253A" stroke-width="1.8" stroke-linecap="round" />
+  <line x1="101" y1="51" x2="107" y2="50" stroke="#29253A" stroke-width="1.8" stroke-linecap="round" />
+  <line x1="101" y1="54.5" x2="107" y2="55" stroke="#29253A" stroke-width="1.8" stroke-linecap="round" />
+
+  <!-- Small floating heart between them -->
+  <path d="M64 25 C64 22.5 60.5 21 59 23.5 C57.5 21 54 22.5 54 25 C54 28.5 59 31.5 59 31.5 C59 31.5 64 28.5 64 25 Z" fill="#FF79B0" />
+</svg>
