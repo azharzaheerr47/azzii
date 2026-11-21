@@ -14,6 +14,7 @@ import type {
 } from '../../types/index';
 import {
   connectMongoDB,
+  DatabaseConnectionError,
   NoteModel,
   SpaceModel,
   UserModel,
@@ -173,7 +174,15 @@ function hydrateNote(note: StoredNoteRecord, usersMap: Map<string, StoredUserRec
 
 async function useMongo(): Promise<boolean> {
   const uri = process.env.MONGODB_URI?.trim();
-  if (!uri) return false;
+  if (!uri) {
+    if (process.env.VERCEL === '1') {
+      throw new DatabaseConnectionError(
+        'MONGODB_NOT_CONFIGURED',
+        'MONGODB_URI is not set in Vercel Environment Variables.',
+      );
+    }
+    return false;
+  }
   await connectMongoDB(uri);
   return true;
 }

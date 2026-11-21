@@ -5,11 +5,23 @@ const SESSION_COOKIE_NAME = 'ols_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14; // 14 days
 
 let ephemeralSecret: string | null = null;
+let warnedMissingAuthSecret = false;
+
+export function isAuthSecretConfigured(): boolean {
+  const configured = process.env.AUTH_SECRET?.trim();
+  return Boolean(configured && configured.length >= 16);
+}
 
 function getAuthSecret(): string {
   const configured = process.env.AUTH_SECRET?.trim();
   if (configured && configured.length >= 16) {
     return configured;
+  }
+  if (process.env.VERCEL === '1' && !warnedMissingAuthSecret) {
+    warnedMissingAuthSecret = true;
+    console.warn(
+      '[auth-config] AUTH_SECRET is missing or shorter than 16 characters; sessions will reset across serverless cold starts.',
+    );
   }
   if (!ephemeralSecret) {
     ephemeralSecret = crypto.randomBytes(32).toString('hex');
@@ -140,7 +152,12 @@ export function parseCookieToken(cookieHeader: string | undefined): string | nul
     if (idx === -1) continue;
     const key = pair.slice(0, idx).trim();
     if (key === SESSION_COOKIE_NAME) {
-      return decodeURIComponent(pair.slice(idx + 1).trim());
+      const raw = pair.slice(idx + 1).trim();
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return null;
+      }
     }
   }
   return null;

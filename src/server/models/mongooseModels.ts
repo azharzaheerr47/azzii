@@ -131,6 +131,16 @@ interface MongooseCache {
 
 const globalWithMongoose = globalThis as typeof globalThis & { __mongooseCache?: MongooseCache };
 
+export class DatabaseConnectionError extends Error {
+  readonly code: 'MONGODB_NOT_CONFIGURED' | 'MONGODB_UNREACHABLE';
+
+  constructor(code: 'MONGODB_NOT_CONFIGURED' | 'MONGODB_UNREACHABLE', message: string) {
+    super(message);
+    this.name = 'DatabaseConnectionError';
+    this.code = code;
+  }
+}
+
 export async function connectMongoDB(uri: string): Promise<typeof mongoose> {
   if (!globalWithMongoose.__mongooseCache) {
     globalWithMongoose.__mongooseCache = { conn: null, promise: null };
@@ -148,11 +158,18 @@ export async function connectMongoDB(uri: string): Promise<typeof mongoose> {
       .connect(uri, {
         bufferCommands: false,
         maxPoolSize: 10,
-        serverSelectionTimeoutMS: 8000,
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
       })
       .catch((err) => {
+        cache.conn = null;
         cache.promise = null;
-        throw err;
+        const safeName = err instanceof Error ? err.name : 'MongoError';
+        console.error('[mongodb] Connection failed:', safeName);
+        throw new DatabaseConnectionError(
+          'MONGODB_UNREACHABLE',
+          'Could not connect to MongoDB Atlas. Verify MONGODB_URI and Atlas Network Access (allow 0.0.0.0/0).',
+        );
       });
   }
   cache.conn = await cache.promise;
@@ -176,7 +193,10 @@ export async function pingMongoDB(): Promise<{
     return {
       configured: true,
       connected: false,
-      error: err instanceof Error ? err.message : 'MongoDB connection failed',
+      error:
+        err instanceof DatabaseConnectionError
+          ? err.message
+          : 'MongoDB connection failed',
     };
   }
 }

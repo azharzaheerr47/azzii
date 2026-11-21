@@ -1,5 +1,7 @@
 import cookieParser from 'cookie-parser';
-import express, { type Express } from 'express';
+import express, { type Express, type NextFunction, type Request, type Response } from 'express';
+import multer from 'multer';
+import { DatabaseConnectionError } from './models/mongooseModels';
 import { createApiRouter } from './routes/api';
 
 export function createApp(): Express {
@@ -46,6 +48,38 @@ export function createApp(): Express {
   });
 
   app.use('/api', createApiRouter());
+
+  // Centralized JSON error handler so malformed JSON, Multer limits, DB failures, or unexpected throws never emit HTML 500s
+  app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+    if (res.headersSent) return;
+
+    if (err instanceof SyntaxError && 'body' in err) {
+      res.status(400).json({ error: 'Invalid JSON request body.' });
+      return;
+    }
+
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        res.status(413).json({ error: 'Each image must be 5 MB or smaller.' });
+        return;
+      }
+      if (err.code === 'LIMIT_FILE_COUNT') {
+        res.status(400).json({ error: 'You can attach up to 4 images per note.' });
+        return;
+      }
+      res.status(400).json({ error: err.message || 'Invalid image upload.' });
+      return;
+    }
+
+    if (err instanceof DatabaseConnectionError) {
+      res.status(503).json({ error: err.message });
+      return;
+    }
+
+    const safeName = err instanceof Error ? err.name : 'UnknownError';
+    console.error('[server-error]', { method: req.method, path: req.path, name: safeName });
+    res.status(500).json({ error: 'Unexpected server error. Please try again.' });
+  });
 
   return app;
 }
