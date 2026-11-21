@@ -3,7 +3,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api?__vercel_path=$1" },
     { "source": "/robots.txt", "destination": "/api?__vercel_path=robots.txt" },
     { "source": "/sitemap.xml", "destination": "/api?__vercel_path=sitemap.xml" },
     { "source": "/((?!api(?:/|$)|assets/|favicon\\.svg|.*\\..*).*)", "destination": "/index.html" }
