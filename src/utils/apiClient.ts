@@ -21,22 +21,103 @@ export function getMemorySessionToken(): string | null {
   return memorySessionToken;
 }
 
-async function requestJson<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(url, {
-    ...options,
-    credentials: 'include',
-    headers: {
-      ...BASE_HEADERS,
-      ...(memorySessionToken ? { Authorization: `Bearer ${memorySessionToken}` } : {}),
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(options.headers || {}),
-    },
-  });
+export type ApiErrorKind = 'http' | 'database' | 'network' | 'invalid_response';
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(typeof data.error === 'string' ? data.error : `Request failed (${res.status})`);
+export class ApiRequestError extends Error {
+  readonly status: number | null;
+  readonly kind: ApiErrorKind;
+  readonly method: string;
+  readonly endpoint: string;
+
+  constructor(
+    message: string,
+    options: {
+      status: number | null;
+      kind: ApiErrorKind;
+      method: string;
+      endpoint: string;
+    },
+  ) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = options.status;
+    this.kind = options.kind;
+    this.method = options.method;
+    this.endpoint = options.endpoint;
   }
+}
+
+function defaultHttpErrorMessage(status: number, method: string, endpoint: string): string {
+  switch (status) {
+    case 401:
+      return 'Authentication required (HTTP 401). Please sign in.';
+    case 403:
+      return 'Access denied (HTTP 403).';
+    case 404:
+      return `API route not found: ${method} ${endpoint} returned HTTP 404. Verify Vercel serverless deployment and routing.`;
+    case 405:
+      return `Method not allowed: ${method} ${endpoint} returned HTTP 405.`;
+    case 503:
+      return 'Database or backend service is unavailable (HTTP 503).';
+    case 500:
+      return `Server error on ${method} ${endpoint} (HTTP 500). Check deployment logs and environment variables.`;
+    default:
+      return `Request failed (HTTP ${status}) on ${method} ${endpoint}.`;
+  }
+}
+
+async function requestJson<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const method = (options.method || 'GET').toUpperCase();
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        ...BASE_HEADERS,
+        ...(memorySessionToken ? { Authorization: `Bearer ${memorySessionToken}` } : {}),
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch {
+    throw new ApiRequestError(
+      'Unable to reach the server. Check your internet connection and verify the app URL is reachable.',
+      { status: null, kind: 'network', method, endpoint: url },
+    );
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const rawText = await res.text();
+  let data: Record<string, unknown> | null = null;
+
+  if (rawText) {
+    try {
+      data = JSON.parse(rawText) as Record<string, unknown>;
+    } catch {
+      data = null;
+    }
+  }
+
+  if (!res.ok) {
+    const serverMsg = data && typeof data.error === 'string' ? data.error : null;
+    const kind: ApiErrorKind = res.status === 503 ? 'database' : 'http';
+    throw new ApiRequestError(serverMsg || defaultHttpErrorMessage(res.status, method, url), {
+      status: res.status,
+      kind,
+      method,
+      endpoint: url,
+    });
+  }
+
+  if (data === null || (!isJson && rawText.trim().startsWith('<'))) {
+    throw new ApiRequestError(
+      `Invalid response format from ${method} ${url} (expected JSON, received HTML/non-JSON). Verify Vercel API routing.`,
+      { status: res.status, kind: 'invalid_response', method, endpoint: url },
+    );
+  }
+
   return data as T;
 }
 

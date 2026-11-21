@@ -17,17 +17,28 @@ test('Vercel serverless Express handler serves API, rewrites, JSON errors, 503 o
   const baseUrl = `http://127.0.0.1:${address.port}`;
 
   try {
-    // 1. SEO endpoints (direct + Vercel __vercel_path rewrite)
-    const robotsRes = await fetch(`${baseUrl}/api/index?__vercel_path=robots.txt`);
+    // 1. SEO endpoints (Vercel /api?__vercel_path=... rewrite)
+    const robotsRes = await fetch(`${baseUrl}/api?__vercel_path=robots.txt`);
     assert.equal(robotsRes.status, 200);
     assert.match(await robotsRes.text(), /Disallow: \/api\//);
 
-    const sitemapRes = await fetch(`${baseUrl}/api/index?__vercel_path=sitemap.xml`);
+    const sitemapRes = await fetch(`${baseUrl}/api?__vercel_path=sitemap.xml`);
     assert.equal(sitemapRes.status, 200);
     assert.match(await sitemapRes.text(), /<urlset/);
 
-    // 2. Auth status via __vercel_path rewrite returns poll mode
-    const statusRes = await fetch(`${baseUrl}/api/index?__vercel_path=auth/status`);
+    // 2. Auth status and health via /api?__vercel_path=... rewrite return poll mode
+    const healthRes = await fetch(`${baseUrl}/api?__vercel_path=health`);
+    assert.equal(healthRes.status, 200);
+    const healthJson = (await healthRes.json()) as {
+      status: string;
+      application: string;
+      realtimeMode: string;
+    };
+    assert.equal(healthJson.status, 'ok');
+    assert.equal(healthJson.application, 'Our Little Space');
+    assert.equal(healthJson.realtimeMode, 'poll');
+
+    const statusRes = await fetch(`${baseUrl}/api?__vercel_path=auth/status`);
     assert.equal(statusRes.status, 200);
     const statusJson = (await statusRes.json()) as {
       authenticated: boolean;
@@ -206,8 +217,8 @@ test('Vercel serverless Express handler serves API, rewrites, JSON errors, 503 o
     assert.equal(deletedNote.isDeleted, true);
     assert.equal(deletedNote.content, '');
 
-    // List notes via __vercel_path rewrite confirms note persists
-    const listRes = await fetch(`${baseUrl}/api/index?__vercel_path=notes`, {
+    // List notes via /api?__vercel_path rewrite confirms note persists
+    const listRes = await fetch(`${baseUrl}/api?__vercel_path=notes`, {
       headers: { Authorization: `Bearer ${redeemData.sessionToken}` },
     });
     assert.equal(listRes.status, 200);

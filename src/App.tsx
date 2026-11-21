@@ -8,7 +8,7 @@ import type {
   SpaceSettings,
   SpaceStatus,
 } from './types/index';
-import { api } from './utils/apiClient';
+import { api, ApiRequestError } from './utils/apiClient';
 import { useRealtimeSync } from './hooks/useRealtimeSync';
 import { AppShell, type AppRoute } from './components/layout/AppShell';
 import { ImageLightbox, type LightboxImageItem } from './components/ui/ImageLightbox';
@@ -94,7 +94,11 @@ function InnerApp() {
     parsePathToRoute(window.location.pathname),
   );
   const [bootLoading, setBootLoading] = useState(true);
-  const [bootError, setBootError] = useState<string | null>(null);
+  const [bootError, setBootError] = useState<{
+    title: string;
+    message: string;
+    detail?: string;
+  } | null>(null);
 
   const [status, setStatus] = useState<SpaceStatus | null>(null);
   const [user, setUser] = useState<PublicUser | null>(null);
@@ -161,34 +165,61 @@ function InnerApp() {
     }
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+  const runBootCheck = useCallback(
+    async (isCancelled?: () => boolean) => {
+      setBootLoading(true);
+      setBootError(null);
       try {
         const spaceStatus = await api.getAuthStatus();
-        if (cancelled) return;
+        if (isCancelled?.()) return;
         setStatus(spaceStatus);
 
         if (spaceStatus.authenticated) {
           await loadAuthenticatedSpace();
-          if (!cancelled && window.location.pathname === '/login') {
+          if (!isCancelled?.() && window.location.pathname === '/login') {
             navigate('dashboard');
           }
-        } else if (!cancelled) {
+        } else if (!isCancelled?.()) {
           setUser(null);
         }
       } catch (err) {
-        if (!cancelled) {
-          setBootError(err instanceof Error ? err.message : 'Unable to reach server.');
+        if (isCancelled?.()) return;
+        if (err instanceof ApiRequestError) {
+          const title =
+            err.status === 404
+              ? 'Backend endpoint not found (404)'
+              : err.kind === 'database' || err.status === 503
+                ? 'Database connection unavailable'
+                : err.kind === 'invalid_response'
+                  ? 'Unexpected server response'
+                  : err.kind === 'network'
+                    ? 'Could not connect to Our Little Space'
+                    : `Server error (${err.status ?? '500'})`;
+          setBootError({
+            title,
+            message: err.message,
+            detail: `${err.method} ${err.endpoint}${err.status ? ` · HTTP ${err.status}` : ''}`,
+          });
+        } else {
+          setBootError({
+            title: 'Could not connect to Our Little Space',
+            message: err instanceof Error ? err.message : 'Unable to reach server.',
+          });
         }
       } finally {
-        if (!cancelled) setBootLoading(false);
+        if (!isCancelled?.()) setBootLoading(false);
       }
-    })();
+    },
+    [loadAuthenticatedSpace, navigate],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    runBootCheck(() => cancelled);
     return () => {
       cancelled = true;
     };
-  }, [loadAuthenticatedSpace, navigate]);
+  }, [runBootCheck]);
 
   const handleRealtimeEvent = useCallback((event: RealtimeEvent) => {
     switch (event.type) {
@@ -315,13 +346,18 @@ function InnerApp() {
       <div className="min-h-screen bg-[#FAF9FE] flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white border border-[#6554A4]/20 rounded-2xl p-6 text-center">
           <h1 className="font-display text-lg font-bold text-[#29253A]">
-            Could not connect to Our Little Space
+            {bootError?.title || 'Could not connect to Our Little Space'}
           </h1>
-          <p className="mt-2 text-sm text-[#645E7B]">{bootError}</p>
+          <p className="mt-2 text-sm text-[#645E7B]">
+            {bootError?.message || 'Unable to load application status.'}
+          </p>
+          {bootError?.detail && (
+            <p className="mt-2 text-xs text-[#645E7B]/80 font-mono">{bootError.detail}</p>
+          )}
           <button
             type="button"
-            onClick={() => window.location.reload()}
-            className="mt-5 px-4 py-2 rounded-xl bg-[#6554A4] text-white text-sm font-medium"
+            onClick={() => runBootCheck()}
+            className="mt-5 px-4 py-2 rounded-xl bg-[#6554A4] hover:bg-[#534391] text-white text-sm font-medium transition-colors"
           >
             Try again
           </button>

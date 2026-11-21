@@ -185,6 +185,13 @@ export function createApiRouter(): express.Router {
         (!cloudinary.configured || cloudinary.connected) &&
         (process.env.VERCEL !== '1' || mongodb.configured);
       res.status(ok ? 200 : 503).json({
+        status: ok ? 'ok' : 'error',
+        application: 'Our Little Space',
+        database: mongodb.connected
+          ? 'connected'
+          : mongodb.configured
+            ? 'error'
+            : 'not_configured',
         ok,
         mongodb,
         cloudinary,
