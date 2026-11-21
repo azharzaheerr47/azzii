@@ -25,10 +25,14 @@ export const setupAccountSchema = z.object({
   email: z.string().trim().email('Please enter a valid email address').max(120),
   password: z.string().min(8, 'Password must be at least 8 characters').max(100),
   avatarPreset: z.enum(AVATAR_PRESETS).default('bat-cat'),
+  spaceName: z.string().trim().min(1).max(48).optional(),
 });
 
-export const redeemInviteSchema = setupAccountSchema.extend({
-  inviteCode: z.string().trim().min(6, 'Invite code is required').max(64),
+export const redeemInviteSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required').max(40, 'Name must be 40 characters or fewer'),
+  email: z.string().trim().email('Please enter a valid email address').max(120),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100),
+  inviteCode: z.string().trim().min(4, 'Invite code is required').max(64),
   avatarPreset: z.enum(AVATAR_PRESETS).default('bow-cat'),
 });
 

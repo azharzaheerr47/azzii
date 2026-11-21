@@ -26,6 +26,7 @@ import { deleteStoredImage, isCloudinaryConfigured } from '../media/imageService
 
 interface StoredUserRecord {
   id: string;
+  spaceId: string;
   name: string;
   email: string;
   passwordHash: string;
@@ -37,6 +38,7 @@ interface StoredUserRecord {
 
 interface StoredNoteRecord {
   id: string;
+  spaceId: string;
   authorId: string;
   content: string;
   tone: NoteTone;
@@ -49,6 +51,7 @@ interface StoredNoteRecord {
 }
 
 interface StoredSpaceRecord {
+  id?: string;
   spaceName: string;
   tagline: string;
   welcomeMessage: string;
@@ -61,7 +64,8 @@ interface StoredSpaceRecord {
 interface LocalDatabaseSnapshot {
   users: StoredUserRecord[];
   notes: StoredNoteRecord[];
-  space: StoredSpaceRecord;
+  space?: StoredSpaceRecord;
+  spaces?: Record<string, StoredSpaceRecord>;
 }
 
 const DATA_DIR =
@@ -69,11 +73,11 @@ const DATA_DIR =
     ? path.resolve(os.tmpdir(), '.data')
     : path.resolve(process.cwd(), '.data');
 const LOCAL_DB_PATH = path.resolve(DATA_DIR, 'space-db.json');
-const DEFAULT_SPACE_ID = 'primary-space';
+export const DEFAULT_SPACE_ID = 'primary-space';
 
-function defaultSpace(): StoredSpaceRecord {
+function defaultSpace(spaceName = 'Our Little Space'): StoredSpaceRecord {
   return {
-    spaceName: 'Our Little Space',
+    spaceName,
     tagline: 'A quiet private corner for two',
     welcomeMessage: 'Leave little notes, favorite moments, and snapshots for each other here.',
     logoStyle: 'cat-duo',
@@ -83,22 +87,53 @@ function defaultSpace(): StoredSpaceRecord {
   };
 }
 
-function readLocalDb(): LocalDatabaseSnapshot {
+function normalizeLocalSnapshot(raw: LocalDatabaseSnapshot): {
+  users: StoredUserRecord[];
+  notes: StoredNoteRecord[];
+  spaces: Record<string, StoredSpaceRecord>;
+} {
+  const spaces: Record<string, StoredSpaceRecord> = { ...(raw.spaces || {}) };
+  if (raw.space && !spaces[DEFAULT_SPACE_ID]) {
+    spaces[DEFAULT_SPACE_ID] = raw.space;
+  }
+  if (!spaces[DEFAULT_SPACE_ID]) {
+    spaces[DEFAULT_SPACE_ID] = defaultSpace();
+  }
+  const users = (raw.users || []).map((u) => ({
+    ...u,
+    spaceId: u.spaceId || DEFAULT_SPACE_ID,
+  }));
+  const notes = (raw.notes || []).map((n) => ({
+    ...n,
+    spaceId: n.spaceId || DEFAULT_SPACE_ID,
+  }));
+  return { users, notes, spaces };
+}
+
+function readLocalDb(): {
+  users: StoredUserRecord[];
+  notes: StoredNoteRecord[];
+  spaces: Record<string, StoredSpaceRecord>;
+} {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(LOCAL_DB_PATH)) {
-    const initial: LocalDatabaseSnapshot = {
+    const initial = {
       users: [],
       notes: [],
-      space: defaultSpace(),
+      spaces: { [DEFAULT_SPACE_ID]: defaultSpace() },
     };
     writeLocalDb(initial);
     return initial;
   }
-  const raw = fs.readFileSync(LOCAL_DB_PATH, 'utf8');
-  return JSON.parse(raw) as LocalDatabaseSnapshot;
+  const raw = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, 'utf8')) as LocalDatabaseSnapshot;
+  return normalizeLocalSnapshot(raw);
 }
 
-function writeLocalDb(snapshot: LocalDatabaseSnapshot): void {
+function writeLocalDb(snapshot: {
+  users: StoredUserRecord[];
+  notes: StoredNoteRecord[];
+  spaces: Record<string, StoredSpaceRecord>;
+}): void {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const tempPath = `${LOCAL_DB_PATH}.${process.pid}.tmp`;
   fs.writeFileSync(tempPath, JSON.stringify(snapshot, null, 2), 'utf8');
@@ -108,6 +143,7 @@ function writeLocalDb(snapshot: LocalDatabaseSnapshot): void {
 function toPublicUser(u: StoredUserRecord): PublicUser {
   return {
     id: u.id,
+    spaceId: u.spaceId || DEFAULT_SPACE_ID,
     name: u.name,
     email: u.email,
     avatar: u.avatar,
@@ -120,6 +156,7 @@ function toPublicUser(u: StoredUserRecord): PublicUser {
 function mongoUserToRecord(doc: IUserDoc): StoredUserRecord {
   return {
     id: doc._id,
+    spaceId: doc.spaceId || DEFAULT_SPACE_ID,
     name: doc.name,
     email: doc.email,
     passwordHash: doc.passwordHash,
@@ -133,6 +170,7 @@ function mongoUserToRecord(doc: IUserDoc): StoredUserRecord {
 function mongoNoteToRecord(doc: INoteDoc): StoredNoteRecord {
   return {
     id: doc._id,
+    spaceId: doc.spaceId || DEFAULT_SPACE_ID,
     authorId: doc.authorId,
     content: doc.content,
     tone: doc.tone,
@@ -172,6 +210,22 @@ function hydrateNote(note: StoredNoteRecord, usersMap: Map<string, StoredUserRec
   };
 }
 
+function mongoSpaceFilter(spaceId: string): Record<string, unknown> {
+  if (spaceId === DEFAULT_SPACE_ID) {
+    return { $or: [{ spaceId: DEFAULT_SPACE_ID }, { spaceId: { $exists: false } }] };
+  }
+  return { spaceId };
+}
+
+function isMongoDuplicateKeyError(err: unknown): boolean {
+  return Boolean(
+    err &&
+      typeof err === 'object' &&
+      'code' in err &&
+      (err as { code?: unknown }).code === 11000,
+  );
+}
+
 async function useMongo(): Promise<boolean> {
   const uri = process.env.MONGODB_URI?.trim();
   if (!uri) {
@@ -187,11 +241,54 @@ async function useMongo(): Promise<boolean> {
   return true;
 }
 
-export async function getSpaceStatus(): Promise<SpaceStatus> {
+export async function getSpaceStatus(spaceId?: string): Promise<SpaceStatus> {
   const mongo = await useMongo();
   if (mongo) {
-    const userCount = await UserModel.countDocuments();
-    const space = await SpaceModel.findById(DEFAULT_SPACE_ID).lean();
+    if (spaceId) {
+      const [userCount, space] = await Promise.all([
+        UserModel.countDocuments(mongoSpaceFilter(spaceId)),
+        SpaceModel.findById(spaceId).lean(),
+      ]);
+      const hasOpenInvite = Boolean(
+        userCount < 2 &&
+          space?.inviteCodeHash &&
+          space.inviteExpiresAt &&
+          new Date(space.inviteExpiresAt).getTime() > Date.now(),
+      );
+      return {
+        initialized: true,
+        userCount,
+        maxUsers: 2,
+        hasOpenInvite,
+        storageMode: 'mongodb',
+        mediaMode: isCloudinaryConfigured() ? 'cloudinary' : 'local',
+      };
+    }
+
+    const totalUsers = await UserModel.countDocuments();
+    const defaultUserCount =
+      totalUsers > 0 ? await UserModel.countDocuments(mongoSpaceFilter(DEFAULT_SPACE_ID)) : 0;
+    const openSpaceInvite = await SpaceModel.findOne({
+      inviteCodeHash: { $ne: null },
+      inviteExpiresAt: { $gt: new Date() },
+    })
+      .select({ _id: 1 })
+      .lean();
+
+    return {
+      initialized: totalUsers > 0,
+      userCount: Math.min(defaultUserCount, 2),
+      maxUsers: 2,
+      hasOpenInvite: Boolean(openSpaceInvite),
+      storageMode: 'mongodb',
+      mediaMode: isCloudinaryConfigured() ? 'cloudinary' : 'local',
+    };
+  }
+
+  const db = readLocalDb();
+  if (spaceId) {
+    const userCount = db.users.filter((u) => u.spaceId === spaceId).length;
+    const space = db.spaces[spaceId];
     const hasOpenInvite = Boolean(
       userCount < 2 &&
         space?.inviteCodeHash &&
@@ -199,25 +296,26 @@ export async function getSpaceStatus(): Promise<SpaceStatus> {
         new Date(space.inviteExpiresAt).getTime() > Date.now(),
     );
     return {
-      initialized: userCount > 0,
+      initialized: true,
       userCount,
       maxUsers: 2,
       hasOpenInvite,
-      storageMode: 'mongodb',
+      storageMode: 'local',
       mediaMode: isCloudinaryConfigured() ? 'cloudinary' : 'local',
     };
   }
 
-  const db = readLocalDb();
-  const hasOpenInvite = Boolean(
-    db.users.length < 2 &&
-      db.space.inviteCodeHash &&
-      db.space.inviteExpiresAt &&
-      new Date(db.space.inviteExpiresAt).getTime() > Date.now(),
+  const totalUsers = db.users.length;
+  const defaultUserCount = db.users.filter((u) => u.spaceId === DEFAULT_SPACE_ID).length;
+  const hasOpenInvite = Object.values(db.spaces).some(
+    (s) =>
+      Boolean(s.inviteCodeHash) &&
+      Boolean(s.inviteExpiresAt) &&
+      new Date(s.inviteExpiresAt!).getTime() > Date.now(),
   );
   return {
-    initialized: db.users.length > 0,
-    userCount: db.users.length,
+    initialized: totalUsers > 0,
+    userCount: Math.min(defaultUserCount, 2),
     maxUsers: 2,
     hasOpenInvite,
     storageMode: 'local',
@@ -230,8 +328,33 @@ export async function createFounderAccount(input: {
   email: string;
   password: string;
   avatarPreset: AvatarPreset;
+  spaceName?: string;
+}): Promise<{ user: PublicUser; inviteCode: string }> {
+  const mongo = await useMongo();
+  if (mongo) {
+    const count = await UserModel.countDocuments();
+    if (count > 0) {
+      throw new Error('SPACE_ALREADY_INITIALIZED');
+    }
+  } else {
+    const db = readLocalDb();
+    if (db.users.length > 0) {
+      throw new Error('SPACE_ALREADY_INITIALIZED');
+    }
+  }
+  return signupWithNewSpace(input);
+}
+
+export async function signupWithNewSpace(input: {
+  name: string;
+  email: string;
+  password: string;
+  avatarPreset: AvatarPreset;
+  spaceName?: string;
 }): Promise<{ user: PublicUser; inviteCode: string }> {
   const email = input.email.trim().toLowerCase();
+  const displayName = input.name.trim();
+  const spaceName = input.spaceName?.trim() || 'Our Little Space';
   const passwordHash = hashPassword(input.password);
   const inviteCode = generateInviteCode();
   const inviteHash = hashInviteCode(inviteCode);
@@ -241,48 +364,65 @@ export async function createFounderAccount(input: {
 
   const mongo = await useMongo();
   if (mongo) {
-    const count = await UserModel.countDocuments();
-    if (count > 0) {
-      throw new Error('SPACE_ALREADY_INITIALIZED');
+    const existing = await UserModel.findOne({ email });
+    if (existing) {
+      throw new Error('EMAIL_EXISTS');
     }
-    const created = await UserModel.create({
-      _id: userId,
-      name: input.name.trim(),
-      email,
-      passwordHash,
-      avatar: '',
-      avatarPreset: input.avatarPreset,
-      role: 'founder',
-      createdAt: now,
-    });
-    await SpaceModel.findByIdAndUpdate(
-      DEFAULT_SPACE_ID,
-      {
-        $setOnInsert: {
-          _id: DEFAULT_SPACE_ID,
-          spaceName: 'Our Little Space',
-          tagline: 'A quiet private corner for two',
-          welcomeMessage: 'Leave little notes, favorite moments, and snapshots for each other here.',
-          logoStyle: 'cat-duo',
+
+    const totalUsers = await UserModel.countDocuments();
+    const spaceId = totalUsers === 0 ? DEFAULT_SPACE_ID : crypto.randomUUID();
+
+    try {
+      const created = await UserModel.create({
+        _id: userId,
+        spaceId,
+        name: displayName,
+        email,
+        passwordHash,
+        avatar: '',
+        avatarPreset: input.avatarPreset,
+        role: 'founder',
+        createdAt: now,
+      });
+
+      await SpaceModel.findByIdAndUpdate(
+        spaceId,
+        {
+          $setOnInsert: {
+            _id: spaceId,
+            tagline: 'A quiet private corner for two',
+            welcomeMessage: 'Leave little notes, favorite moments, and snapshots for each other here.',
+            logoStyle: 'cat-duo',
+          },
+          $set: {
+            spaceName,
+            inviteCodeHash: inviteHash,
+            inviteExpiresAt: inviteExpires,
+            updatedAt: now,
+          },
         },
-        $set: {
-          inviteCodeHash: inviteHash,
-          inviteExpiresAt: inviteExpires,
-          updatedAt: now,
-        },
-      },
-      { upsert: true },
-    );
-    return { user: toPublicUser(mongoUserToRecord(created)), inviteCode };
+        { upsert: true },
+      );
+
+      return { user: toPublicUser(mongoUserToRecord(created)), inviteCode };
+    } catch (err) {
+      if (isMongoDuplicateKeyError(err)) {
+        throw new Error('EMAIL_EXISTS');
+      }
+      throw err;
+    }
   }
 
   const db = readLocalDb();
-  if (db.users.length > 0) {
-    throw new Error('SPACE_ALREADY_INITIALIZED');
+  if (db.users.some((u) => u.email === email)) {
+    throw new Error('EMAIL_EXISTS');
   }
+
+  const spaceId = db.users.length === 0 ? DEFAULT_SPACE_ID : crypto.randomUUID();
   const newUser: StoredUserRecord = {
     id: userId,
-    name: input.name.trim(),
+    spaceId,
+    name: displayName,
     email,
     passwordHash,
     avatar: '',
@@ -290,10 +430,16 @@ export async function createFounderAccount(input: {
     role: 'founder',
     createdAt: now.toISOString(),
   };
+
   db.users.push(newUser);
-  db.space.inviteCodeHash = inviteHash;
-  db.space.inviteExpiresAt = inviteExpires.toISOString();
-  db.space.updatedAt = now.toISOString();
+  const existingSpace = db.spaces[spaceId] ?? defaultSpace(spaceName);
+  db.spaces[spaceId] = {
+    ...existingSpace,
+    spaceName,
+    inviteCodeHash: inviteHash,
+    inviteExpiresAt: inviteExpires.toISOString(),
+    updatedAt: now.toISOString(),
+  };
   writeLocalDb(db);
   return { user: toPublicUser(newUser), inviteCode };
 }
@@ -313,15 +459,12 @@ export async function redeemPartnerInvite(input: {
 
   const mongo = await useMongo();
   if (mongo) {
-    const count = await UserModel.countDocuments();
-    if (count >= 2) {
-      throw new Error('SPACE_FULL');
-    }
     const existing = await UserModel.findOne({ email });
     if (existing) {
       throw new Error('EMAIL_EXISTS');
     }
-    const space = await SpaceModel.findById(DEFAULT_SPACE_ID);
+
+    const space = await SpaceModel.findOne({ inviteCodeHash: providedHash });
     if (
       !space ||
       !space.inviteCodeHash ||
@@ -331,40 +474,71 @@ export async function redeemPartnerInvite(input: {
     ) {
       throw new Error('INVALID_INVITE');
     }
-    const created = await UserModel.create({
-      _id: userId,
-      name: input.name.trim(),
-      email,
-      passwordHash,
-      avatar: '',
-      avatarPreset: input.avatarPreset,
-      role: 'partner',
-      createdAt: now,
-    });
-    space.inviteCodeHash = null;
-    space.inviteExpiresAt = null;
-    space.updatedAt = now;
-    await space.save();
-    return toPublicUser(mongoUserToRecord(created));
+
+    const spaceUsersCount = await UserModel.countDocuments(mongoSpaceFilter(space._id));
+    if (spaceUsersCount >= 2) {
+      throw new Error('SPACE_FULL');
+    }
+
+    try {
+      const created = await UserModel.create({
+        _id: userId,
+        spaceId: space._id,
+        name: input.name.trim(),
+        email,
+        passwordHash,
+        avatar: '',
+        avatarPreset: input.avatarPreset,
+        role: 'partner',
+        createdAt: now,
+      });
+      space.inviteCodeHash = null;
+      space.inviteExpiresAt = null;
+      space.updatedAt = now;
+      await space.save();
+      return toPublicUser(mongoUserToRecord(created));
+    } catch (err) {
+      if (isMongoDuplicateKeyError(err)) {
+        throw new Error('EMAIL_EXISTS');
+      }
+      throw err;
+    }
   }
 
   const db = readLocalDb();
-  if (db.users.length >= 2) {
-    throw new Error('SPACE_FULL');
-  }
   if (db.users.some((u) => u.email === email)) {
     throw new Error('EMAIL_EXISTS');
   }
-  if (
-    !db.space.inviteCodeHash ||
-    !db.space.inviteExpiresAt ||
-    new Date(db.space.inviteExpiresAt).getTime() < Date.now() ||
-    !crypto.timingSafeEqual(Buffer.from(db.space.inviteCodeHash), Buffer.from(providedHash))
-  ) {
+
+  let matchedSpaceId: string | null = null;
+  for (const [candidateSpaceId, candidateSpace] of Object.entries(db.spaces)) {
+    if (
+      candidateSpace.inviteCodeHash &&
+      candidateSpace.inviteCodeHash.length === providedHash.length &&
+      crypto.timingSafeEqual(Buffer.from(candidateSpace.inviteCodeHash), Buffer.from(providedHash))
+    ) {
+      if (
+        candidateSpace.inviteExpiresAt &&
+        new Date(candidateSpace.inviteExpiresAt).getTime() >= Date.now()
+      ) {
+        matchedSpaceId = candidateSpaceId;
+        break;
+      }
+    }
+  }
+
+  if (!matchedSpaceId) {
     throw new Error('INVALID_INVITE');
   }
+
+  const spaceUsersCount = db.users.filter((u) => u.spaceId === matchedSpaceId).length;
+  if (spaceUsersCount >= 2) {
+    throw new Error('SPACE_FULL');
+  }
+
   const newUser: StoredUserRecord = {
     id: userId,
+    spaceId: matchedSpaceId,
     name: input.name.trim(),
     email,
     passwordHash,
@@ -374,14 +548,17 @@ export async function redeemPartnerInvite(input: {
     createdAt: now.toISOString(),
   };
   db.users.push(newUser);
-  db.space.inviteCodeHash = null;
-  db.space.inviteExpiresAt = null;
-  db.space.updatedAt = now.toISOString();
+  db.spaces[matchedSpaceId] = {
+    ...db.spaces[matchedSpaceId],
+    inviteCodeHash: null,
+    inviteExpiresAt: null,
+    updatedAt: now.toISOString(),
+  };
   writeLocalDb(db);
   return toPublicUser(newUser);
 }
 
-export async function rotatePartnerInvite(requesterId: string): Promise<string> {
+export async function rotatePartnerInvite(requesterId: string, spaceId: string): Promise<string> {
   const inviteCode = generateInviteCode();
   const inviteHash = hashInviteCode(inviteCode);
   const inviteExpires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
@@ -389,11 +566,13 @@ export async function rotatePartnerInvite(requesterId: string): Promise<string> 
   const mongo = await useMongo();
   if (mongo) {
     const user = await UserModel.findById(requesterId);
-    if (!user) throw new Error('UNAUTHORIZED');
-    const count = await UserModel.countDocuments();
+    if (!user || (user.spaceId || DEFAULT_SPACE_ID) !== spaceId) {
+      throw new Error('UNAUTHORIZED');
+    }
+    const count = await UserModel.countDocuments(mongoSpaceFilter(spaceId));
     if (count >= 2) throw new Error('SPACE_FULL');
     await SpaceModel.findByIdAndUpdate(
-      DEFAULT_SPACE_ID,
+      spaceId,
       {
         $set: {
           inviteCodeHash: inviteHash,
@@ -407,11 +586,15 @@ export async function rotatePartnerInvite(requesterId: string): Promise<string> 
   }
 
   const db = readLocalDb();
-  if (!db.users.some((u) => u.id === requesterId)) throw new Error('UNAUTHORIZED');
-  if (db.users.length >= 2) throw new Error('SPACE_FULL');
-  db.space.inviteCodeHash = inviteHash;
-  db.space.inviteExpiresAt = inviteExpires.toISOString();
-  db.space.updatedAt = new Date().toISOString();
+  const user = db.users.find((u) => u.id === requesterId);
+  if (!user || user.spaceId !== spaceId) throw new Error('UNAUTHORIZED');
+  if (db.users.filter((u) => u.spaceId === spaceId).length >= 2) throw new Error('SPACE_FULL');
+  db.spaces[spaceId] = {
+    ...(db.spaces[spaceId] ?? defaultSpace()),
+    inviteCodeHash: inviteHash,
+    inviteExpiresAt: inviteExpires.toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
   writeLocalDb(db);
   return inviteCode;
 }
@@ -444,14 +627,14 @@ export async function getUserById(userId: string): Promise<PublicUser | null> {
   return user ? toPublicUser(user) : null;
 }
 
-export async function listSpaceMembers(): Promise<PublicUser[]> {
+export async function listSpaceMembers(spaceId: string): Promise<PublicUser[]> {
   const mongo = await useMongo();
   if (mongo) {
-    const users = await UserModel.find().sort({ createdAt: 1 });
+    const users = await UserModel.find(mongoSpaceFilter(spaceId)).sort({ createdAt: 1 });
     return users.map((u) => toPublicUser(mongoUserToRecord(u)));
   }
   const db = readLocalDb();
-  return db.users.map(toPublicUser);
+  return db.users.filter((u) => u.spaceId === spaceId).map(toPublicUser);
 }
 
 export async function updateUserProfile(
@@ -515,12 +698,12 @@ export async function changeUserPassword(
   writeLocalDb(db);
 }
 
-export async function getSpaceSettings(): Promise<SpaceSettings> {
+export async function getSpaceSettings(spaceId: string): Promise<SpaceSettings> {
   const mongo = await useMongo();
   if (mongo) {
-    let space = await SpaceModel.findById(DEFAULT_SPACE_ID);
+    let space = await SpaceModel.findById(spaceId);
     if (!space) {
-      space = await SpaceModel.create({ _id: DEFAULT_SPACE_ID });
+      space = await SpaceModel.create({ _id: spaceId });
     }
     return {
       spaceName: space.spaceName,
@@ -531,26 +714,30 @@ export async function getSpaceSettings(): Promise<SpaceSettings> {
     };
   }
   const db = readLocalDb();
+  const space = db.spaces[spaceId] ?? defaultSpace();
   return {
-    spaceName: db.space.spaceName,
-    tagline: db.space.tagline,
-    welcomeMessage: db.space.welcomeMessage,
-    logoStyle: db.space.logoStyle,
-    updatedAt: db.space.updatedAt,
+    spaceName: space.spaceName,
+    tagline: space.tagline,
+    welcomeMessage: space.welcomeMessage,
+    logoStyle: space.logoStyle,
+    updatedAt: space.updatedAt,
   };
 }
 
-export async function updateSpaceSettings(input: {
-  spaceName: string;
-  tagline: string;
-  welcomeMessage: string;
-  logoStyle: 'cat-duo' | 'heart' | 'moon';
-}): Promise<SpaceSettings> {
+export async function updateSpaceSettings(
+  spaceId: string,
+  input: {
+    spaceName: string;
+    tagline: string;
+    welcomeMessage: string;
+    logoStyle: 'cat-duo' | 'heart' | 'moon';
+  },
+): Promise<SpaceSettings> {
   const now = new Date();
   const mongo = await useMongo();
   if (mongo) {
     const space = await SpaceModel.findByIdAndUpdate(
-      DEFAULT_SPACE_ID,
+      spaceId,
       {
         $set: {
           spaceName: input.spaceName.trim(),
@@ -572,8 +759,9 @@ export async function updateSpaceSettings(input: {
   }
 
   const db = readLocalDb();
-  db.space = {
-    ...db.space,
+  const current = db.spaces[spaceId] ?? defaultSpace();
+  db.spaces[spaceId] = {
+    ...current,
     spaceName: input.spaceName.trim(),
     tagline: input.tagline.trim(),
     welcomeMessage: input.welcomeMessage.trim(),
@@ -582,38 +770,45 @@ export async function updateSpaceSettings(input: {
   };
   writeLocalDb(db);
   return {
-    spaceName: db.space.spaceName,
-    tagline: db.space.tagline,
-    welcomeMessage: db.space.welcomeMessage,
-    logoStyle: db.space.logoStyle,
-    updatedAt: db.space.updatedAt,
+    spaceName: db.spaces[spaceId].spaceName,
+    tagline: db.spaces[spaceId].tagline,
+    welcomeMessage: db.spaces[spaceId].welcomeMessage,
+    logoStyle: db.spaces[spaceId].logoStyle,
+    updatedAt: db.spaces[spaceId].updatedAt,
   };
 }
 
-export async function listNotes(options?: {
-  search?: string;
-  authorId?: string;
-  sort?: 'newest' | 'oldest';
-}): Promise<SharedNote[]> {
+export async function listNotes(
+  spaceId: string,
+  options?: {
+    search?: string;
+    authorId?: string;
+    sort?: 'newest' | 'oldest';
+  },
+): Promise<SharedNote[]> {
   const mongo = await useMongo();
   let usersMap: Map<string, StoredUserRecord>;
   let noteRecords: StoredNoteRecord[];
 
   if (mongo) {
     const [users, notes] = await Promise.all([
-      UserModel.find(),
-      NoteModel.find().sort({ createdAt: options?.sort === 'oldest' ? 1 : -1 }),
+      UserModel.find(mongoSpaceFilter(spaceId)),
+      NoteModel.find(mongoSpaceFilter(spaceId)).sort({
+        createdAt: options?.sort === 'oldest' ? 1 : -1,
+      }),
     ]);
     usersMap = new Map(users.map((u) => [u._id, mongoUserToRecord(u)]));
     noteRecords = notes.map(mongoNoteToRecord);
   } else {
     const db = readLocalDb();
-    usersMap = new Map(db.users.map((u) => [u.id, u]));
-    noteRecords = [...db.notes].sort((a, b) => {
-      const ta = new Date(a.createdAt).getTime();
-      const tb = new Date(b.createdAt).getTime();
-      return options?.sort === 'oldest' ? ta - tb : tb - ta;
-    });
+    usersMap = new Map(db.users.filter((u) => u.spaceId === spaceId).map((u) => [u.id, u]));
+    noteRecords = db.notes
+      .filter((n) => n.spaceId === spaceId)
+      .sort((a, b) => {
+        const ta = new Date(a.createdAt).getTime();
+        const tb = new Date(b.createdAt).getTime();
+        return options?.sort === 'oldest' ? ta - tb : tb - ta;
+      });
   }
 
   let hydrated = noteRecords.map((n) => hydrateNote(n, usersMap));
@@ -635,6 +830,7 @@ export async function listNotes(options?: {
 
 export async function createNote(
   authorId: string,
+  spaceId: string,
   input: {
     content: string;
     tone: NoteTone;
@@ -648,9 +844,12 @@ export async function createNote(
   const mongo = await useMongo();
   if (mongo) {
     const author = await UserModel.findById(authorId);
-    if (!author) throw new Error('UNAUTHORIZED');
+    if (!author || (author.spaceId || DEFAULT_SPACE_ID) !== spaceId) {
+      throw new Error('UNAUTHORIZED');
+    }
     const created = await NoteModel.create({
       _id: noteId,
+      spaceId,
       authorId,
       content: input.content.trim(),
       tone: input.tone,
@@ -669,10 +868,11 @@ export async function createNote(
   }
 
   const db = readLocalDb();
-  const author = db.users.find((u) => u.id === authorId);
+  const author = db.users.find((u) => u.id === authorId && u.spaceId === spaceId);
   if (!author) throw new Error('UNAUTHORIZED');
   const record: StoredNoteRecord = {
     id: noteId,
+    spaceId,
     authorId,
     content: input.content.trim(),
     tone: input.tone,
@@ -691,6 +891,7 @@ export async function createNote(
 export async function updateNoteByAuthor(
   noteId: string,
   requesterId: string,
+  spaceId: string,
   input: {
     content: string;
     tone?: NoteTone;
@@ -703,7 +904,9 @@ export async function updateNoteByAuthor(
 
   if (mongo) {
     const existing = await NoteModel.findById(noteId);
-    if (!existing) throw new Error('NOT_FOUND');
+    if (!existing || (existing.spaceId || DEFAULT_SPACE_ID) !== spaceId) {
+      throw new Error('NOT_FOUND');
+    }
     if (existing.authorId !== requesterId) throw new Error('FORBIDDEN');
     if (existing.isDeleted) throw new Error('ALREADY_DELETED');
 
@@ -735,7 +938,7 @@ export async function updateNoteByAuthor(
 
   const db = readLocalDb();
   const idx = db.notes.findIndex((n) => n.id === noteId);
-  if (idx === -1) throw new Error('NOT_FOUND');
+  if (idx === -1 || db.notes[idx].spaceId !== spaceId) throw new Error('NOT_FOUND');
   const existing = db.notes[idx];
   if (existing.authorId !== requesterId) throw new Error('FORBIDDEN');
   if (existing.isDeleted) throw new Error('ALREADY_DELETED');
@@ -766,13 +969,16 @@ export async function updateNoteByAuthor(
 export async function softDeleteNoteByAuthor(
   noteId: string,
   requesterId: string,
+  spaceId: string,
 ): Promise<SharedNote> {
   const now = new Date();
   const mongo = await useMongo();
 
   if (mongo) {
     const existing = await NoteModel.findById(noteId);
-    if (!existing) throw new Error('NOT_FOUND');
+    if (!existing || (existing.spaceId || DEFAULT_SPACE_ID) !== spaceId) {
+      throw new Error('NOT_FOUND');
+    }
     if (existing.authorId !== requesterId) throw new Error('FORBIDDEN');
     if (existing.isDeleted) throw new Error('ALREADY_DELETED');
 
@@ -794,7 +1000,7 @@ export async function softDeleteNoteByAuthor(
 
   const db = readLocalDb();
   const idx = db.notes.findIndex((n) => n.id === noteId);
-  if (idx === -1) throw new Error('NOT_FOUND');
+  if (idx === -1 || db.notes[idx].spaceId !== spaceId) throw new Error('NOT_FOUND');
   const existing = db.notes[idx];
   if (existing.authorId !== requesterId) throw new Error('FORBIDDEN');
   if (existing.isDeleted) throw new Error('ALREADY_DELETED');

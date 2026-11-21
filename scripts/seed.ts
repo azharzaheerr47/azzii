@@ -26,21 +26,21 @@ async function runSeed() {
     avatarPreset: 'bat-cat',
   });
 
-  await createNote(maya.id, {
+  await createNote(maya.id, maya.spaceId, {
     content: 'Saved two seats by the window at our favorite bakery this morning. Got you the iced oat matcha.',
     tone: 'pink',
     sticker: 'love-cats',
     images: [],
   });
 
-  await createNote(leo.id, {
+  await createNote(leo.id, leo.spaceId, {
     content: 'Walked home under the purple sunset and remembered we still need to pick a movie for tonight.',
     tone: 'lavender',
     sticker: 'cozy-moon',
     images: [],
   });
 
-  await createNote(maya.id, {
+  await createNote(maya.id, maya.spaceId, {
     content: 'Reminder: bring your film camera for Saturday afternoon at the botanical conservatory!',
     tone: 'blue',
     sticker: 'pastel-flower',

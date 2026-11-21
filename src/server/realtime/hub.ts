@@ -6,12 +6,19 @@ import { parseCookieToken, verifySessionToken } from '../auth/crypto';
 
 interface AuthedSocket extends WebSocket {
   userId?: string;
+  spaceId?: string;
   isAlive?: boolean;
+}
+
+interface SseClient {
+  userId: string;
+  spaceId: string;
+  res: Response;
 }
 
 class RealtimeHub {
   private wss: WebSocketServer | null = null;
-  private sseClients = new Map<string, Set<Response>>();
+  private sseClients = new Set<SseClient>();
   private wsAttached = false;
 
   isWsAttached(): boolean {
@@ -54,24 +61,26 @@ class RealtimeHub {
       this.wss?.handleUpgrade(req, socket, head, (ws) => {
         const authed = ws as AuthedSocket;
         authed.userId = session.sub;
+        authed.spaceId = session.spaceId || 'primary-space';
         authed.isAlive = true;
         this.wss?.emit('connection', authed, req);
       });
     });
 
     this.wss.on('connection', (ws: AuthedSocket) => {
-      this.broadcastPresence();
+      const spaceId = ws.spaceId || 'primary-space';
+      this.broadcastPresence(spaceId);
 
       ws.on('pong', () => {
         ws.isAlive = true;
       });
 
       ws.on('close', () => {
-        this.broadcastPresence();
+        this.broadcastPresence(spaceId);
       });
 
       ws.on('error', () => {
-        this.broadcastPresence();
+        this.broadcastPresence(spaceId);
       });
     });
 
@@ -91,59 +100,62 @@ class RealtimeHub {
     this.wss.on('close', () => clearInterval(interval));
   }
 
-  registerSse(userId: string, res: Response): () => void {
-    let set = this.sseClients.get(userId);
-    if (!set) {
-      set = new Set();
-      this.sseClients.set(userId, set);
-    }
-    set.add(res);
-    this.broadcastPresence();
+  registerSse(userId: string, spaceId: string, res: Response): () => void {
+    const client: SseClient = { userId, spaceId, res };
+    this.sseClients.add(client);
+    this.broadcastPresence(spaceId);
 
     return () => {
-      set?.delete(res);
-      if (set && set.size === 0) {
-        this.sseClients.delete(userId);
-      }
-      this.broadcastPresence();
+      this.sseClients.delete(client);
+      this.broadcastPresence(spaceId);
     };
   }
 
-  getOnlineUserIds(): string[] {
+  getOnlineUserIds(spaceId: string): string[] {
     const ids = new Set<string>();
     if (this.wss) {
       for (const client of this.wss.clients) {
         const authed = client as AuthedSocket;
-        if (authed.readyState === WebSocket.OPEN && authed.userId) {
+        if (
+          authed.readyState === WebSocket.OPEN &&
+          authed.userId &&
+          (authed.spaceId || 'primary-space') === spaceId
+        ) {
           ids.add(authed.userId);
         }
       }
     }
-    for (const [userId, set] of this.sseClients.entries()) {
-      if (set.size > 0) ids.add(userId);
+    for (const client of this.sseClients) {
+      if (client.spaceId === spaceId) {
+        ids.add(client.userId);
+      }
     }
     return Array.from(ids);
   }
 
-  broadcastPresence(): void {
-    this.broadcast({
+  broadcastPresence(spaceId: string): void {
+    this.broadcast(spaceId, {
       type: 'presence:update',
-      payload: { onlineUserIds: this.getOnlineUserIds() },
+      payload: { onlineUserIds: this.getOnlineUserIds(spaceId) },
     });
   }
 
-  broadcast(event: RealtimeEvent): void {
+  broadcast(spaceId: string, event: RealtimeEvent): void {
     const serialized = JSON.stringify(event);
     if (this.wss) {
       for (const client of this.wss.clients) {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(serialized);
+        const authed = client as AuthedSocket;
+        if (
+          authed.readyState === WebSocket.OPEN &&
+          (authed.spaceId || 'primary-space') === spaceId
+        ) {
+          authed.send(serialized);
         }
       }
     }
-    for (const set of this.sseClients.values()) {
-      for (const res of set) {
-        res.write(`data: ${serialized}\n\n`);
+    for (const client of this.sseClients) {
+      if (client.spaceId === spaceId) {
+        client.res.write(`data: ${serialized}\n\n`);
       }
     }
   }

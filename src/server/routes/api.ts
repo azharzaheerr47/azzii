@@ -37,6 +37,7 @@ import {
   listSpaceMembers,
   redeemPartnerInvite,
   rotatePartnerInvite,
+  signupWithNewSpace,
   softDeleteNoteByAuthor,
   updateNoteByAuthor,
   updateSpaceSettings,
@@ -208,10 +209,10 @@ export function createApiRouter(): express.Router {
     '/auth/status',
     asyncHandler(async (req, res) => {
       try {
-        const status = await getSpaceStatus();
         const token = extractAuthToken(req);
         const payload = verifySessionToken(token);
         const authedUser = payload ? await getUserById(payload.sub) : null;
+        const status = await getSpaceStatus(authedUser?.spaceId);
         res.json({
           ...status,
           authenticated: Boolean(authedUser),
@@ -223,7 +224,7 @@ export function createApiRouter(): express.Router {
     }),
   );
 
-  // First-run Account 1 setup
+  // First-run Account 1 setup (legacy compatibility)
   router.post(
     '/auth/setup',
     authLimiter,
@@ -236,7 +237,7 @@ export function createApiRouter(): express.Router {
 
       try {
         const { user, inviteCode } = await createFounderAccount(parsed.data);
-        const token = signSessionToken(user.id, user.role);
+        const token = signSessionToken(user.id, user.role, user.spaceId);
         setSessionCookie(req, res, token);
         res.status(201).json({ user, inviteCode, sessionToken: token });
       } catch (err) {
@@ -245,12 +246,43 @@ export function createApiRouter(): express.Router {
           res.status(403).json({ error: 'This private space has already been initialized.' });
           return;
         }
+        if (msg === 'EMAIL_EXISTS') {
+          res.status(409).json({ error: 'An account with this email already exists.' });
+          return;
+        }
         respondWithServerError(res, err, 'Failed to create account.');
       }
     }),
   );
 
-  // Partner 2 invite redemption (strictly enforces max 2 accounts)
+  // Sign up: creates Account 1 + a new private 2-person space + partner invite code
+  router.post(
+    '/auth/signup',
+    authLimiter,
+    asyncHandler(async (req, res) => {
+      const parsed = setupAccountSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid sign up details.' });
+        return;
+      }
+
+      try {
+        const { user, inviteCode } = await signupWithNewSpace(parsed.data);
+        const token = signSessionToken(user.id, user.role, user.spaceId);
+        setSessionCookie(req, res, token);
+        res.status(201).json({ user, inviteCode, sessionToken: token });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '';
+        if (msg === 'EMAIL_EXISTS') {
+          res.status(409).json({ error: 'An account with this email already exists.' });
+          return;
+        }
+        respondWithServerError(res, err, 'Failed to create account.');
+      }
+    }),
+  );
+
+  // Partner 2 invite redemption (strictly enforces max 2 accounts per space)
   router.post(
     '/auth/redeem-invite',
     authLimiter,
@@ -263,9 +295,9 @@ export function createApiRouter(): express.Router {
 
       try {
         const user = await redeemPartnerInvite(parsed.data);
-        const token = signSessionToken(user.id, user.role);
+        const token = signSessionToken(user.id, user.role, user.spaceId);
         setSessionCookie(req, res, token);
-        realtimeHub.broadcast({ type: 'user:updated', payload: user });
+        realtimeHub.broadcast(user.spaceId, { type: 'user:updated', payload: user });
         res.status(201).json({ user, sessionToken: token });
       } catch (err) {
         const msg = err instanceof Error ? err.message : '';
@@ -303,7 +335,7 @@ export function createApiRouter(): express.Router {
           res.status(401).json({ error: 'Invalid email or password.' });
           return;
         }
-        const token = signSessionToken(user.id, user.role);
+        const token = signSessionToken(user.id, user.role, user.spaceId);
         setSessionCookie(req, res, token);
         res.json({ user, sessionToken: token });
       } catch (err) {
@@ -324,10 +356,11 @@ export function createApiRouter(): express.Router {
     requireAuth,
     asyncHandler(async (req, res) => {
       try {
+        const spaceId = req.authUser!.spaceId;
         const [members, space, status] = await Promise.all([
-          listSpaceMembers(),
-          getSpaceSettings(),
-          getSpaceStatus(),
+          listSpaceMembers(spaceId),
+          getSpaceSettings(spaceId),
+          getSpaceStatus(spaceId),
         ]);
         res.json({
           user: req.authUser,
@@ -338,7 +371,7 @@ export function createApiRouter(): express.Router {
             authenticated: true,
             realtimeMode: realtimeHub.isWsAttached() ? 'ws' : 'poll',
           },
-          onlineUserIds: realtimeHub.getOnlineUserIds(),
+          onlineUserIds: realtimeHub.getOnlineUserIds(spaceId),
         });
       } catch (err) {
         respondWithServerError(res, err, 'Failed to load profile.');
@@ -346,14 +379,14 @@ export function createApiRouter(): express.Router {
     }),
   );
 
-  // Rotate partner invite code (only when < 2 users)
+  // Rotate partner invite code (only when < 2 users in space)
   router.post(
     '/space/invite',
     requireAuth,
     writeLimiter,
     asyncHandler(async (req, res) => {
       try {
-        const inviteCode = await rotatePartnerInvite(req.authUser!.id);
+        const inviteCode = await rotatePartnerInvite(req.authUser!.id, req.authUser!.spaceId);
         res.json({ inviteCode });
       } catch (err) {
         const msg = err instanceof Error ? err.message : '';
@@ -379,8 +412,8 @@ export function createApiRouter(): express.Router {
       }
 
       try {
-        const updated = await updateSpaceSettings(parsed.data);
-        realtimeHub.broadcast({ type: 'space:updated', payload: updated });
+        const updated = await updateSpaceSettings(req.authUser!.spaceId, parsed.data);
+        realtimeHub.broadcast(req.authUser!.spaceId, { type: 'space:updated', payload: updated });
         res.json({ space: updated });
       } catch (err) {
         respondWithServerError(res, err, 'Failed to update space settings.');
@@ -402,7 +435,7 @@ export function createApiRouter(): express.Router {
 
       try {
         const updated = await updateUserProfile(req.authUser!.id, parsed.data);
-        realtimeHub.broadcast({ type: 'user:updated', payload: updated });
+        realtimeHub.broadcast(req.authUser!.spaceId, { type: 'user:updated', payload: updated });
         res.json({ user: updated });
       } catch (err) {
         respondWithServerError(res, err, 'Failed to update profile.');
@@ -449,7 +482,7 @@ export function createApiRouter(): express.Router {
         const search = typeof req.query.search === 'string' ? req.query.search : undefined;
         const authorId = typeof req.query.authorId === 'string' ? req.query.authorId : undefined;
         const sort = req.query.sort === 'oldest' ? 'oldest' : 'newest';
-        const notes = await listNotes({ search, authorId, sort });
+        const notes = await listNotes(req.authUser!.spaceId, { search, authorId, sort });
         res.json({ notes });
       } catch (err) {
         respondWithServerError(res, err, 'Failed to load shared notes.');
@@ -470,8 +503,8 @@ export function createApiRouter(): express.Router {
       }
 
       try {
-        const note = await createNote(req.authUser!.id, parsed.data);
-        realtimeHub.broadcast({ type: 'note:created', payload: note });
+        const note = await createNote(req.authUser!.id, req.authUser!.spaceId, parsed.data);
+        realtimeHub.broadcast(req.authUser!.spaceId, { type: 'note:created', payload: note });
         res.status(201).json({ note });
       } catch (err) {
         respondWithServerError(res, err, 'Failed to create note.');
@@ -492,8 +525,13 @@ export function createApiRouter(): express.Router {
       }
 
       try {
-        const note = await updateNoteByAuthor(req.params.id, req.authUser!.id, parsed.data);
-        realtimeHub.broadcast({ type: 'note:updated', payload: note });
+        const note = await updateNoteByAuthor(
+          req.params.id,
+          req.authUser!.id,
+          req.authUser!.spaceId,
+          parsed.data,
+        );
+        realtimeHub.broadcast(req.authUser!.spaceId, { type: 'note:updated', payload: note });
         res.json({ note });
       } catch (err) {
         const msg = err instanceof Error ? err.message : '';
@@ -521,8 +559,12 @@ export function createApiRouter(): express.Router {
     writeLimiter,
     asyncHandler(async (req, res) => {
       try {
-        const note = await softDeleteNoteByAuthor(req.params.id, req.authUser!.id);
-        realtimeHub.broadcast({ type: 'note:deleted', payload: note });
+        const note = await softDeleteNoteByAuthor(
+          req.params.id,
+          req.authUser!.id,
+          req.authUser!.spaceId,
+        );
+        realtimeHub.broadcast(req.authUser!.spaceId, { type: 'note:deleted', payload: note });
         res.json({ note });
       } catch (err) {
         const msg = err instanceof Error ? err.message : '';
@@ -609,11 +651,12 @@ export function createApiRouter(): express.Router {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders?.();
 
-    const unregister = realtimeHub.registerSse(req.authUser!.id, res);
+    const spaceId = req.authUser!.spaceId;
+    const unregister = realtimeHub.registerSse(req.authUser!.id, spaceId, res);
     res.write(
       `data: ${JSON.stringify({
         type: 'presence:update',
-        payload: { onlineUserIds: realtimeHub.getOnlineUserIds() },
+        payload: { onlineUserIds: realtimeHub.getOnlineUserIds(spaceId) },
       })}\n\n`,
     );
 

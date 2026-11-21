@@ -288,6 +288,84 @@ test('Vercel serverless Express handler serves API, rewrites, JSON errors, 503 o
       }),
     });
     assert.equal(newLoginRes.status, 200);
+
+    // 8. Sign up creates a brand-new isolated private space even after Space 1 is full
+    const space2SignupRes = await fetch(`${baseUrl}/api/auth/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({
+        name: 'Azhar',
+        email: 'azhar@example.com',
+        password: 'SpaceTwoPassword1!',
+        avatarPreset: 'bat-cat',
+        spaceName: 'Azhar & Partner',
+      }),
+    });
+    assert.equal(space2SignupRes.status, 201);
+    const space2Signup = (await space2SignupRes.json()) as {
+      inviteCode: string;
+      sessionToken: string;
+      user: { id: string; spaceId: string };
+    };
+    assert.ok(space2Signup.inviteCode);
+    assert.notEqual(space2Signup.user.spaceId, 'primary-space');
+
+    // Duplicate email rejected cleanly (409)
+    const dupEmailRes = await fetch(`${baseUrl}/api/auth/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({
+        name: 'Azhar 2',
+        email: 'azhar@example.com',
+        password: 'SpaceTwoPassword1!',
+        avatarPreset: 'sky',
+      }),
+    });
+    assert.equal(dupEmailRes.status, 409);
+
+    // Space 2 user cannot see Space 1's notes and gets customized space settings
+    const space2MeRes = await fetch(`${baseUrl}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${space2Signup.sessionToken}` },
+    });
+    assert.equal(space2MeRes.status, 200);
+    const space2Me = (await space2MeRes.json()) as {
+      space: { spaceName: string };
+      members: Array<{ id: string }>;
+      status: { userCount: number };
+    };
+    assert.equal(space2Me.space.spaceName, 'Azhar & Partner');
+    assert.equal(space2Me.members.length, 1);
+    assert.equal(space2Me.status.userCount, 1);
+
+    const space2NotesRes = await fetch(`${baseUrl}/api/notes`, {
+      headers: { Authorization: `Bearer ${space2Signup.sessionToken}` },
+    });
+    assert.equal(space2NotesRes.status, 200);
+    const space2Notes = (await space2NotesRes.json()) as { notes: unknown[] };
+    assert.equal(space2Notes.notes.length, 0);
+
+    // Partner 2 joins Space 2 using Space 2's invite code
+    const space2PartnerRes = await fetch(`${baseUrl}/api/auth/redeem-invite`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({
+        inviteCode: space2Signup.inviteCode,
+        name: 'Sam',
+        email: 'sam@example.com',
+        password: 'SpaceTwoPassword2!',
+        avatarPreset: 'bow-cat',
+      }),
+    });
+    assert.equal(space2PartnerRes.status, 201);
   } finally {
     fs.rmSync(TEMP_DB, { recursive: true, force: true });
     await new Promise<void>((resolve, reject) =>

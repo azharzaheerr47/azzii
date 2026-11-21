@@ -22,6 +22,8 @@ const AVATAR_CHOICES: { id: AvatarPreset; label: string }[] = [
   { id: 'sky', label: 'Sky' },
 ];
 
+type AuthTab = 'login' | 'signup' | 'invite';
+
 export const LoginPage: React.FC<LoginPageProps> = ({
   status,
   initialInviteCode = null,
@@ -29,27 +31,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 }) => {
   const { showToast } = useToast();
   const isFirstRun = !status.initialized;
-  const canJoinWithInvite = status.initialized && status.userCount < status.maxUsers;
   const normalizedUrlInvite = normalizeInviteCode(initialInviteCode);
 
-  const [mode, setMode] = useState<'setup' | 'login' | 'invite'>(() => {
-    if (isFirstRun) return 'setup';
-    if (canJoinWithInvite && normalizedUrlInvite) return 'invite';
+  const [mode, setMode] = useState<AuthTab>(() => {
+    if (normalizedUrlInvite) return 'invite';
+    if (isFirstRun) return 'signup';
     return 'login';
   });
 
+  const [spaceName, setSpaceName] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [inviteCode, setInviteCode] = useState(() => normalizedUrlInvite ?? '');
   const [avatarPreset, setAvatarPreset] = useState<AvatarPreset>(
-    isFirstRun ? 'bat-cat' : 'bow-cat',
+    mode === 'invite' ? 'bow-cat' : 'bat-cat',
   );
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const activeMode = isFirstRun ? 'setup' : mode === 'setup' ? 'login' : mode;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,11 +57,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setSubmitting(true);
 
     try {
-      if (activeMode === 'setup') {
-        const res = await api.setupFounder({ name, email, password, avatarPreset });
+      if (mode === 'signup') {
+        const res = await api.signup({
+          name,
+          email,
+          password,
+          avatarPreset,
+          spaceName: spaceName.trim() || undefined,
+        });
         await onAuthenticated(res.user, res.inviteCode);
-        showToast('Your private space is ready.', 'success');
-      } else if (activeMode === 'invite') {
+        showToast('Your private space is ready. Share your invite link with your partner!', 'success');
+      } else if (mode === 'invite') {
         const res = await api.redeemInvite({
           inviteCode,
           name,
@@ -106,11 +112,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <div className="mt-6 flex items-center gap-2 text-xs text-[#645E7B]">
             <Lock className="w-3.5 h-3.5 text-[#6554A4]" />
             <span>
-              {status.userCount === 2
-                ? 'Private 2-person space · Both partner accounts active'
-                : status.initialized
-                  ? 'Private 2-person space · 1 of 2 accounts claimed'
-                  : 'Private 2-person space · Ready for initial setup'}
+              {status.initialized
+                ? 'Private 2-person space · Sign in, create a new space, or join by invite'
+                : 'Private 2-person space · Ready for initial setup'}
             </span>
           </div>
         </motion.section>
@@ -122,89 +126,88 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           transition={{ duration: 0.25, delay: 0.05 }}
           className="lg:col-span-6 bg-white border border-[#6554A4]/15 rounded-2xl p-6 sm:p-8 shadow-xs"
         >
-          {isFirstRun ? (
-            <div className="mb-6">
-              <h2 className="font-display text-xl font-semibold text-[#29253A]">
-                Claim your shared space
-              </h2>
-              <p className="mt-1 text-sm text-[#645E7B]">
-                Create the first of two accounts. You will receive a private invite link and code
-                for your partner right after.
-              </p>
+          <div className="mb-6">
+            <div
+              className="flex flex-wrap sm:inline-flex gap-1 p-1 bg-[#FAF9FE] border border-[#6554A4]/12 rounded-xl mb-4"
+              role="tablist"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'login'}
+                onClick={() => {
+                  setMode('login');
+                  setErrorMsg(null);
+                }}
+                className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+                  mode === 'login'
+                    ? 'bg-white text-[#29253A] shadow-xs'
+                    : 'text-[#645E7B] hover:text-[#29253A]'
+                }`}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'signup'}
+                onClick={() => {
+                  setMode('signup');
+                  setErrorMsg(null);
+                }}
+                className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+                  mode === 'signup'
+                    ? 'bg-white text-[#29253A] shadow-xs'
+                    : 'text-[#645E7B] hover:text-[#29253A]'
+                }`}
+              >
+                Sign up
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'invite'}
+                onClick={() => {
+                  setMode('invite');
+                  setErrorMsg(null);
+                }}
+                className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+                  mode === 'invite'
+                    ? 'bg-white text-[#29253A] shadow-xs'
+                    : 'text-[#645E7B] hover:text-[#29253A]'
+                }`}
+              >
+                Join by invite
+              </button>
             </div>
-          ) : (
-            <div className="mb-6">
-              {canJoinWithInvite ? (
-                <div
-                  className="inline-flex p-1 bg-[#FAF9FE] border border-[#6554A4]/12 rounded-xl mb-4"
-                  role="tablist"
-                >
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeMode === 'login'}
-                    onClick={() => {
-                      setMode('login');
-                      setErrorMsg(null);
-                    }}
-                    className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
-                      activeMode === 'login'
-                        ? 'bg-white text-[#29253A] shadow-xs'
-                        : 'text-[#645E7B] hover:text-[#29253A]'
-                    }`}
-                  >
-                    Sign in
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeMode === 'invite'}
-                    onClick={() => {
-                      setMode('invite');
-                      setErrorMsg(null);
-                    }}
-                    className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
-                      activeMode === 'invite'
-                        ? 'bg-white text-[#29253A] shadow-xs'
-                        : 'text-[#645E7B] hover:text-[#29253A]'
-                    }`}
-                  >
-                    Join with partner invite
-                  </button>
-                </div>
-              ) : null}
 
-              {normalizedUrlInvite && canJoinWithInvite && activeMode === 'invite' && (
-                <div className="mb-4 flex items-center gap-2 rounded-xl bg-[#E9DFFF]/55 border border-[#BFA7F2]/70 px-3.5 py-2.5 text-xs text-[#29253A]">
-                  <Link2 className="w-4 h-4 text-[#6554A4] shrink-0" />
-                  <span>
-                    Partner invite link applied (<strong className="font-semibold">{normalizedUrlInvite}</strong>). Complete your account details below to join.
-                  </span>
-                </div>
-              )}
+            {normalizedUrlInvite && mode === 'invite' && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl bg-[#E9DFFF]/55 border border-[#BFA7F2]/70 px-3.5 py-2.5 text-xs text-[#29253A]">
+                <Link2 className="w-4 h-4 text-[#6554A4] shrink-0" />
+                <span>
+                  Partner invite link applied (<strong className="font-semibold">{normalizedUrlInvite}</strong>). Complete your account details below to join.
+                </span>
+              </div>
+            )}
 
-              {normalizedUrlInvite && !canJoinWithInvite && (
-                <div className="mb-4 flex items-center gap-2 rounded-xl bg-[#FAF9FE] border border-[#6554A4]/20 px-3.5 py-2.5 text-xs text-[#645E7B]">
-                  <Lock className="w-4 h-4 text-[#6554A4] shrink-0" />
-                  <span>
-                    Both partner seats are already claimed in this space. Sign in below with your registered email and password.
-                  </span>
-                </div>
-              )}
-
-              <h2 className="font-display text-xl font-semibold text-[#29253A]">
-                {activeMode === 'invite' ? 'Join your partner' : 'Welcome back'}
-              </h2>
-              <p className="mt-1 text-sm text-[#645E7B]">
-                {activeMode === 'invite'
+            <h2 className="font-display text-xl font-semibold text-[#29253A]">
+              {mode === 'signup'
+                ? 'Create your space'
+                : mode === 'invite'
+                  ? 'Join your partner'
+                  : 'Welcome back'}
+            </h2>
+            <p className="mt-1 text-sm text-[#645E7B]">
+              {mode === 'signup'
+                ? 'Create your account and get a private invite link so your partner can join your 2-person space.'
+                : mode === 'invite'
                   ? 'Use the invite link or enter the code your partner shared to claim the second account.'
                   : 'Sign in with your private credentials to open your shared notes.'}
-              </p>
-            </div>
-          )}
+            </p>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {activeMode === 'invite' && (
+            {mode === 'invite' && (
               <div>
                 <label
                   htmlFor="auth-invite"
@@ -224,7 +227,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
             )}
 
-            {(activeMode === 'setup' || activeMode === 'invite') && (
+            {mode === 'signup' && (
+              <div>
+                <label
+                  htmlFor="auth-space-name"
+                  className="block text-xs font-medium text-[#29253A] mb-1.5"
+                >
+                  Space name <span className="font-normal text-[#645E7B]">(optional)</span>
+                </label>
+                <input
+                  id="auth-space-name"
+                  type="text"
+                  maxLength={48}
+                  value={spaceName}
+                  onChange={(e) => setSpaceName(e.target.value)}
+                  placeholder="Our Little Space"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
+                />
+              </div>
+            )}
+
+            {(mode === 'signup' || mode === 'invite') && (
               <div>
                 <label
                   htmlFor="auth-name"
@@ -239,7 +262,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   maxLength={40}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder={activeMode === 'setup' ? 'e.g., Leo' : 'e.g., Maya'}
+                  placeholder={mode === 'signup' ? 'e.g., Leo' : 'e.g., Maya'}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
                 />
               </div>
@@ -276,11 +299,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   id="auth-password"
                   type={showPassword ? 'text' : 'password'}
                   required
-                  minLength={activeMode === 'login' ? 1 : 8}
-                  autoComplete={activeMode === 'login' ? 'current-password' : 'new-password'}
+                  minLength={mode === 'login' ? 1 : 8}
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={activeMode === 'login' ? 'Enter your password' : 'Minimum 8 characters'}
+                  placeholder={mode === 'login' ? 'Enter your password' : 'Minimum 8 characters'}
                   className="w-full pl-3.5 pr-11 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
                 />
                 <button
@@ -295,7 +318,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
             </div>
 
-            {(activeMode === 'setup' || activeMode === 'invite') && (
+            {(mode === 'signup' || mode === 'invite') && (
               <div>
                 <span className="block text-xs font-medium text-[#29253A] mb-2">
                   Choose your avatar
@@ -328,9 +351,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 className="text-xs text-[#B91C1C] bg-[#FFF5F7] border border-[#E11D48]/20 rounded-xl px-3.5 py-2.5 space-y-1"
               >
                 <p className="font-medium">{errorMsg}</p>
-                {activeMode === 'login' && errorMsg.toLowerCase().includes('invalid email or password') && (
+                {mode === 'login' && errorMsg.toLowerCase().includes('invalid email or password') && (
                   <p className="text-[#9F1239]/90">
-                    Double-check your email address and use the eye icon to verify your password. Once signed in, you can change your password in Settings.
+                    Double-check your email and use the eye icon to verify your password, or switch to Sign up to start a fresh space.
                   </p>
                 )}
               </div>
@@ -343,9 +366,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             >
               {submitting
                 ? 'Please wait...'
-                : activeMode === 'setup'
-                  ? 'Create private space'
-                  : activeMode === 'invite'
+                : mode === 'signup'
+                  ? 'Create account & space'
+                  : mode === 'invite'
                     ? 'Join private space'
                     : 'Enter our space'}
             </button>

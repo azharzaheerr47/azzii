@@ -3,6 +3,7 @@ import type { AvatarPreset, NoteTone, StickerId } from '../../types/index';
 
 export interface IUserDoc extends Document<string> {
   _id: string;
+  spaceId: string;
   name: string;
   email: string;
   passwordHash: string;
@@ -24,6 +25,7 @@ export interface IImageAsset {
 
 export interface INoteDoc extends Document<string> {
   _id: string;
+  spaceId: string;
   authorId: string;
   content: string;
   tone: NoteTone;
@@ -49,6 +51,7 @@ export interface ISpaceDoc extends Document<string> {
 const UserSchema = new Schema<IUserDoc>(
   {
     _id: { type: String, required: true },
+    spaceId: { type: String, required: true, default: 'primary-space', index: true },
     name: { type: String, required: true, trim: true, maxlength: 40 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
@@ -80,6 +83,7 @@ const ImageSubSchema = new Schema<IImageAsset>(
 const NoteSchema = new Schema<INoteDoc>(
   {
     _id: { type: String, required: true },
+    spaceId: { type: String, required: true, default: 'primary-space', index: true },
     authorId: { type: String, required: true, ref: 'User' },
     content: { type: String, default: '', maxlength: 4000 },
     tone: { type: String, enum: ['white', 'lavender', 'pink', 'blue'], default: 'white' },
@@ -94,6 +98,7 @@ const NoteSchema = new Schema<INoteDoc>(
 );
 
 // Required MongoDB indexes
+NoteSchema.index({ spaceId: 1, createdAt: -1 });
 NoteSchema.index({ createdAt: -1 });
 NoteSchema.index({ authorId: 1 });
 NoteSchema.index({ isDeleted: 1 });
@@ -108,7 +113,7 @@ const SpaceSchema = new Schema<ISpaceDoc>(
       default: 'Leave little notes, favorite moments, and snapshots for each other here.',
     },
     logoStyle: { type: String, enum: ['cat-duo', 'heart', 'moon'], default: 'cat-duo' },
-    inviteCodeHash: { type: String, default: null },
+    inviteCodeHash: { type: String, default: null, index: true },
     inviteExpiresAt: { type: Date, default: null },
     updatedAt: { type: Date, default: () => new Date() },
   },

@@ -63,13 +63,19 @@ export function generateInviteCode(): string {
 export interface SessionPayload {
   sub: string;
   role: 'founder' | 'partner';
+  spaceId: string;
   exp: number;
 }
 
-export function signSessionToken(userId: string, role: 'founder' | 'partner'): string {
+export function signSessionToken(
+  userId: string,
+  role: 'founder' | 'partner',
+  spaceId = 'primary-space',
+): string {
   const payload: SessionPayload = {
     sub: userId,
     role,
+    spaceId,
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
   };
   const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');

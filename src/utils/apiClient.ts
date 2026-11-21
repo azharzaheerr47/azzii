@@ -137,9 +137,28 @@ export const api = {
     email: string;
     password: string;
     avatarPreset: AvatarPreset;
+    spaceName?: string;
   }) => {
     const res = await requestJson<{ user: PublicUser; inviteCode: string; sessionToken?: string }>(
       '/api/auth/setup',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    );
+    if (res.sessionToken) memorySessionToken = res.sessionToken;
+    return res;
+  },
+
+  signup: async (payload: {
+    name: string;
+    email: string;
+    password: string;
+    avatarPreset: AvatarPreset;
+    spaceName?: string;
+  }) => {
+    const res = await requestJson<{ user: PublicUser; inviteCode: string; sessionToken?: string }>(
+      '/api/auth/signup',
       {
         method: 'POST',
         body: JSON.stringify(payload),

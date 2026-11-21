@@ -20,6 +20,7 @@ export type AvatarPreset = 'bat-cat' | 'bow-cat' | 'lavender' | 'blush' | 'sky';
 
 export interface PublicUser {
   id: string;
+  spaceId: string;
   name: string;
   email: string;
   avatar: string;
