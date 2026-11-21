@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "tsx server.ts",
-    "build": "vite build && esbuild src/server/vercelEntry.ts --bundle --platform=node --format=esm --packages=external --outfile=api/_server.mjs",
+    "build": "vite build && esbuild src/server/vercelEntry.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js api/_server.mjs",
+    "clean": "rm -rf dist server.js api/index.js",
     "lint": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
     "test": "tsx --test src/lib/noteLogic.test.ts src/server/auth/crypto.test.ts src/server/app.test.ts"
