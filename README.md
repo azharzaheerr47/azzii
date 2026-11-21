@@ -69,8 +69,8 @@ npm run lint
 npm run build
 ```
 
-## Deploying to Cloud / Production
+## Deploying to Vercel / Cloud
 
-1. Set `MONGODB_URI`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `AUTH_SECRET`, and `APP_URL` in your hosting environment.
-2. Build the frontend bundle: `npm run build`.
-3. Start the production server: `npm run start` (`tsx server.ts` on `process.env.PORT || 3000`). Note: For serverless platforms like Vercel that do not support persistent Node WebSocket servers, deploy the Express/WebSocket server on a Node host (Cloud Run, Railway, Render, Fly.io) or swap the `/ws` hub for a managed pub/sub service like Pusher/Ably while keeping the SSE/REST polling path.
+1. Set `MONGODB_URI`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `AUTH_SECRET`, and `APP_URL` in your Vercel Project Environment Variables.
+2. Push to Vercel: `vercel.json` builds the Vite frontend (`dist/`), routes `/api/*`, `/robots.txt`, and `/sitemap.xml` to the serverless Express handler in `api/index.ts`, and routes SPA navigation to `index.html`.
+3. Note on real-time sync: persistent Node hosts (`npm run build` + `npm run start`) use live WebSockets (`/ws`), while Vercel serverless deployments automatically use visibility-aware background sync polling (`realtimeMode: "poll"`).

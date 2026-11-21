@@ -149,7 +149,11 @@ export function createApiRouter(): express.Router {
       const token = extractAuthToken(req);
       const payload = verifySessionToken(token);
       const authedUser = payload ? await getUserById(payload.sub) : null;
-      res.json({ ...status, authenticated: Boolean(authedUser) });
+      res.json({
+        ...status,
+        authenticated: Boolean(authedUser),
+        realtimeMode: realtimeHub.isWsAttached() ? 'ws' : 'poll',
+      });
     } catch {
       res.status(500).json({ error: 'Failed to check space status.' });
     }
@@ -250,7 +254,11 @@ export function createApiRouter(): express.Router {
         user: req.authUser,
         members,
         space,
-        status,
+        status: {
+          ...status,
+          authenticated: true,
+          realtimeMode: realtimeHub.isWsAttached() ? 'ws' : 'poll',
+        },
         onlineUserIds: realtimeHub.getOnlineUserIds(),
       });
     } catch {

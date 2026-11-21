@@ -1,12 +1,16 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { v2 as cloudinary } from 'cloudinary';
 import type { NoteImage } from '../../types/index';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
-const LOCAL_MEDIA_DIR = path.resolve(process.cwd(), '.data', 'media');
+const LOCAL_MEDIA_DIR =
+  process.env.VERCEL === '1'
+    ? path.resolve(os.tmpdir(), '.data', 'media')
+    : path.resolve(process.cwd(), '.data', 'media');
 
 export function isCloudinaryConfigured(): boolean {
   return Boolean(

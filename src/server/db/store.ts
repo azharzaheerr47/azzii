@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import type {
   AvatarPreset,
@@ -62,7 +63,10 @@ interface LocalDatabaseSnapshot {
   space: StoredSpaceRecord;
 }
 
-const DATA_DIR = path.resolve(process.cwd(), '.data');
+const DATA_DIR =
+  process.env.VERCEL === '1'
+    ? path.resolve(os.tmpdir(), '.data')
+    : path.resolve(process.cwd(), '.data');
 const LOCAL_DB_PATH = path.resolve(DATA_DIR, 'space-db.json');
 const DEFAULT_SPACE_ID = 'primary-space';
 

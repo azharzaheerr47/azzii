@@ -144,7 +144,7 @@ function InnerApp() {
     }
   }, [user, space?.spaceName]);
 
-  const loadAuthenticatedSpace = useCallback(async () => {
+  const loadAuthenticatedSpace = useCallback(async (options?: { silent?: boolean }) => {
     const me = await api.getMe();
     setUser(me.user);
     setMembers(me.members);
@@ -152,12 +152,12 @@ function InnerApp() {
     setStatus(me.status);
     setOnlineUserIds(me.onlineUserIds);
 
-    setLoadingNotes(true);
+    if (!options?.silent) setLoadingNotes(true);
     try {
       const notesRes = await api.listNotes();
       setNotes(notesRes.notes);
     } finally {
-      setLoadingNotes(false);
+      if (!options?.silent) setLoadingNotes(false);
     }
   }, []);
 
@@ -238,10 +238,15 @@ function InnerApp() {
   }, []);
 
   const handleReconnectRefresh = useCallback(() => {
-    loadAuthenticatedSpace().catch(() => undefined);
+    loadAuthenticatedSpace({ silent: true }).catch(() => undefined);
   }, [loadAuthenticatedSpace]);
 
-  useRealtimeSync(Boolean(user), handleRealtimeEvent, handleReconnectRefresh);
+  useRealtimeSync(
+    Boolean(user),
+    handleRealtimeEvent,
+    handleReconnectRefresh,
+    status?.realtimeMode ?? 'ws',
+  );
 
   const handleAuthenticated = async (
     _authedUser: PublicUser,

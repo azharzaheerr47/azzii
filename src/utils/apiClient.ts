@@ -189,6 +189,14 @@ export const api = {
       };
 
       xhr.onload = () => {
+        if (xhr.status === 413) {
+          reject(
+            new Error(
+              'Image upload exceeds the 4 MB serverless request limit. Try uploading fewer or smaller photos at once.',
+            ),
+          );
+          return;
+        }
         try {
           const parsed = JSON.parse(xhr.responseText || '{}');
           if (xhr.status >= 200 && xhr.status < 300 && Array.isArray(parsed.images)) {

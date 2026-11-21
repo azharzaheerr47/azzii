@@ -70,6 +70,7 @@ export interface SpaceStatus {
   storageMode: 'mongodb' | 'local';
   mediaMode: 'cloudinary' | 'local';
   authenticated?: boolean;
+  realtimeMode?: 'ws' | 'poll';
 }
 
 export type NotesSortOrder = 'newest' | 'oldest';

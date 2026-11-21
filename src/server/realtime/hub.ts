@@ -12,9 +12,15 @@ interface AuthedSocket extends WebSocket {
 class RealtimeHub {
   private wss: WebSocketServer | null = null;
   private sseClients = new Map<string, Set<Response>>();
+  private wsAttached = false;
+
+  isWsAttached(): boolean {
+    return this.wsAttached;
+  }
 
   attach(server: HttpServer): void {
     if (this.wss) return;
+    this.wsAttached = true;
     this.wss = new WebSocketServer({
       noServer: true,
       handleProtocols: (protocols) => (protocols.has('ols-auth') ? 'ols-auth' : false),

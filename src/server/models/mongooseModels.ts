@@ -139,6 +139,10 @@ export async function connectMongoDB(uri: string): Promise<typeof mongoose> {
   if (cache.conn && mongoose.connection.readyState === 1) {
     return cache.conn;
   }
+  if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
+    cache.conn = null;
+    cache.promise = null;
+  }
   if (!cache.promise) {
     cache.promise = mongoose
       .connect(uri, {

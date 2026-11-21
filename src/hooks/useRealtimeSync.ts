@@ -8,6 +8,7 @@ export function useRealtimeSync(
   enabled: boolean,
   onEvent: (event: RealtimeEvent) => void,
   onReconnected?: () => void,
+  mode: 'ws' | 'poll' = 'ws',
 ): SyncConnectionState {
   const [state, setState] = useState<SyncConnectionState>('connecting');
   const onEventRef = useRef(onEvent);
@@ -23,6 +24,24 @@ export function useRealtimeSync(
 
   useEffect(() => {
     if (!enabled) return;
+
+    if (mode === 'poll') {
+      setState('connected');
+      const syncNow = () => {
+        if (document.visibilityState === 'visible') {
+          onReconnectedRef.current?.();
+        }
+      };
+      const pollInterval = window.setInterval(syncNow, 6000);
+      const onVisibilityOrFocus = () => syncNow();
+      window.addEventListener('focus', onVisibilityOrFocus);
+      document.addEventListener('visibilitychange', onVisibilityOrFocus);
+      return () => {
+        window.clearInterval(pollInterval);
+        window.removeEventListener('focus', onVisibilityOrFocus);
+        document.removeEventListener('visibilitychange', onVisibilityOrFocus);
+      };
+    }
 
     let disposed = false;
     let ws: WebSocket | null = null;
@@ -121,7 +140,7 @@ export function useRealtimeSync(
       ws?.close();
       sse?.close();
     };
-  }, [enabled]);
+  }, [enabled, mode]);
 
   return state;
 }
