@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Check, Copy, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, Link2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { buildInviteLink } from '../lib/inviteLink';
 import type { AvatarPreset, PublicUser, SpaceSettings, SpaceStatus } from '../types/index';
 import { api } from '../utils/apiClient';
 import { SpaceBrandMark } from '../components/artwork/CatDuoIllustration';
@@ -53,10 +54,18 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [avatarPreset, setAvatarPreset] = useState<AvatarPreset>(user.avatarPreset);
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Password form state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
   // Invite state
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [rotatingInvite, setRotatingInvite] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedType, setCopiedType] = useState<'code' | 'link' | null>(null);
 
   const handleSaveSpace = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +108,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     try {
       const res = await api.rotateInvite();
       setInviteCode(res.inviteCode);
-      showToast('New partner invite code created.', 'success');
+      showToast('New partner invite link & code created.', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not rotate invite code.', 'error');
     } finally {
@@ -107,12 +116,37 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     }
   };
 
-  const copyCode = async () => {
+  const copyInvite = async (kind: 'code' | 'link') => {
     if (!inviteCode) return;
-    await navigator.clipboard.writeText(inviteCode).catch(() => undefined);
-    setCopied(true);
-    showToast('Invite code copied.', 'success');
-    window.setTimeout(() => setCopied(false), 2000);
+    const value =
+      kind === 'link' ? buildInviteLink(window.location.origin, inviteCode) : inviteCode;
+    await navigator.clipboard.writeText(value).catch(() => undefined);
+    setCopiedType(kind);
+    showToast(kind === 'link' ? 'Invite link copied.' : 'Invite code copied.', 'success');
+    window.setTimeout(() => setCopiedType((cur) => (cur === kind ? null : cur)), 2000);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      await api.changePassword({ currentPassword, newPassword });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      showToast('Password updated successfully.', 'success');
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'Failed to update password.');
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   return (
@@ -279,6 +313,107 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </form>
       </section>
 
+      {/* Change Password */}
+      <section className="bg-white border border-[#6554A4]/14 rounded-2xl p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-[#29253A]">Password</h2>
+            <p className="mt-0.5 text-xs text-[#645E7B]">
+              Update the password for your account ({user.email}).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPasswords((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[#645E7B] hover:text-[#29253A] hover:bg-[#FAF9FE] transition-colors whitespace-nowrap"
+          >
+            {showPasswords ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            <span>{showPasswords ? 'Hide passwords' : 'Show passwords'}</span>
+          </button>
+        </div>
+
+        <form onSubmit={handleChangePassword} className="mt-5 space-y-4">
+          <div>
+            <label
+              htmlFor="settings-current-password"
+              className="block text-xs font-medium text-[#29253A] mb-1.5"
+            >
+              Current password
+            </label>
+            <input
+              id="settings-current-password"
+              type={showPasswords ? 'text' : 'password'}
+              required
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/25"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="settings-new-password"
+                className="block text-xs font-medium text-[#29253A] mb-1.5"
+              >
+                New password
+              </label>
+              <input
+                id="settings-new-password"
+                type={showPasswords ? 'text' : 'password'}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Minimum 8 characters"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/25"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="settings-confirm-password"
+                className="block text-xs font-medium text-[#29253A] mb-1.5"
+              >
+                Confirm new password
+              </label>
+              <input
+                id="settings-confirm-password"
+                type={showPasswords ? 'text' : 'password'}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                placeholder="Repeat new password"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/25"
+              />
+            </div>
+          </div>
+
+          {passwordError && (
+            <p
+              role="alert"
+              className="text-xs text-[#B91C1C] bg-[#FFF5F7] border border-[#E11D48]/20 rounded-xl px-3.5 py-2.5"
+            >
+              {passwordError}
+            </p>
+          )}
+
+          <div className="pt-1">
+            <button
+              type="submit"
+              disabled={savingPassword}
+              className="px-4 py-2 rounded-xl bg-[#6554A4] hover:bg-[#534391] text-white text-sm font-medium transition-colors disabled:opacity-60"
+            >
+              {savingPassword ? 'Updating...' : 'Update password'}
+            </button>
+          </div>
+        </form>
+      </section>
+
       {/* Two-Person Privacy & Members */}
       <section className="bg-white border border-[#6554A4]/14 rounded-2xl p-6 space-y-4">
         <div className="flex items-start justify-between gap-4">
@@ -317,11 +452,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
 
         {status.userCount < status.maxUsers && (
-          <div className="pt-2 border-t border-[#6554A4]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="pt-3 border-t border-[#6554A4]/10 flex flex-col gap-3">
             <p className="text-xs text-[#645E7B]">
-              Generate a one-time 7-day invite code for your partner to claim seat 2.
+              Generate a one-time 7-day invite link or code for your partner to claim seat 2.
             </p>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2">
               {inviteCode && (
                 <>
                   <code className="px-3 py-1.5 rounded-xl bg-[#FAF9FE] border border-[#6554A4]/20 text-xs font-semibold tracking-wider text-[#29253A] tabular-nums">
@@ -329,11 +464,27 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   </code>
                   <button
                     type="button"
-                    onClick={copyCode}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#6554A4]/20 text-xs font-medium text-[#29253A] hover:bg-[#FAF9FE]"
+                    onClick={() => copyInvite('link')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6554A4] text-white text-xs font-medium hover:bg-[#534391] whitespace-nowrap"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? 'Copied' : 'Copy'}</span>
+                    {copiedType === 'link' ? (
+                      <Check className="w-3.5 h-3.5" />
+                    ) : (
+                      <Link2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedType === 'link' ? 'Link copied' : 'Copy invite link'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyInvite('code')}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#6554A4]/20 text-xs font-medium text-[#29253A] hover:bg-[#FAF9FE] whitespace-nowrap"
+                  >
+                    {copiedType === 'code' ? (
+                      <Check className="w-3.5 h-3.5" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedType === 'code' ? 'Code copied' : 'Copy code'}</span>
                   </button>
                 </>
               )}
@@ -341,10 +492,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 type="button"
                 disabled={rotatingInvite}
                 onClick={handleRotateInvite}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#6554A4] text-white text-xs font-medium hover:bg-[#534391] disabled:opacity-60 whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#6554A4]/25 bg-white text-[#29253A] text-xs font-medium hover:bg-[#FAF9FE] disabled:opacity-60 whitespace-nowrap"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>{inviteCode ? 'New code' : 'Generate invite'}</span>
+                <span>{inviteCode ? 'New link' : 'Generate invite'}</span>
               </button>
             </div>
           </div>

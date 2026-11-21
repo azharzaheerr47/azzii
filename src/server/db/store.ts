@@ -488,6 +488,33 @@ export async function updateUserProfile(
   return toPublicUser(db.users[idx]);
 }
 
+export async function changeUserPassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const mongo = await useMongo();
+  if (mongo) {
+    const user = await UserModel.findById(userId);
+    if (!user) throw new Error('NOT_FOUND');
+    if (!verifyPassword(currentPassword, user.passwordHash)) {
+      throw new Error('INVALID_CURRENT_PASSWORD');
+    }
+    user.passwordHash = hashPassword(newPassword);
+    await user.save();
+    return;
+  }
+
+  const db = readLocalDb();
+  const idx = db.users.findIndex((u) => u.id === userId);
+  if (idx === -1) throw new Error('NOT_FOUND');
+  if (!verifyPassword(currentPassword, db.users[idx].passwordHash)) {
+    throw new Error('INVALID_CURRENT_PASSWORD');
+  }
+  db.users[idx].passwordHash = hashPassword(newPassword);
+  writeLocalDb(db);
+}
+
 export async function getSpaceSettings(): Promise<SpaceSettings> {
   const mongo = await useMongo();
   if (mongo) {

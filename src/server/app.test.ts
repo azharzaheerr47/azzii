@@ -233,6 +233,61 @@ test('Vercel serverless Express handler serves API, rewrites, JSON errors, 503 o
     assert.equal(authedMeRes.status, 200);
     const meRaw = await authedMeRes.text();
     assert.equal(meRaw.includes('passwordHash'), false);
+
+    // Authenticated password change rejects wrong current password and updates on valid input
+    const badPwChangeRes = await fetch(`${baseUrl}/api/profile/password`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${setupData.sessionToken}`,
+      },
+      body: JSON.stringify({
+        currentPassword: 'WrongCurrentPassword!',
+        newPassword: 'UpdatedPassword9!',
+      }),
+    });
+    assert.equal(badPwChangeRes.status, 401);
+
+    const okPwChangeRes = await fetch(`${baseUrl}/api/profile/password`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${setupData.sessionToken}`,
+      },
+      body: JSON.stringify({
+        currentPassword: 'StrongPassword1!',
+        newPassword: 'UpdatedPassword9!',
+      }),
+    });
+    assert.equal(okPwChangeRes.status, 200);
+
+    const oldLoginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({
+        email: 'maya@example.com',
+        password: 'StrongPassword1!',
+      }),
+    });
+    assert.equal(oldLoginRes.status, 401);
+
+    const newLoginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({
+        email: 'maya@example.com',
+        password: 'UpdatedPassword9!',
+      }),
+    });
+    assert.equal(newLoginRes.status, 200);
   } finally {
     fs.rmSync(TEMP_DB, { recursive: true, force: true });
     await new Promise<void>((resolve, reject) =>

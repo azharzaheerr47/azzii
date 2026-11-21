@@ -1,5 +1,6 @@
 import React, { Component, useCallback, useEffect, useMemo, useState } from 'react';
 import { formatNoteTimestamp } from './lib/dateFormat';
+import { extractInviteCodeFromSearch } from './lib/inviteLink';
 import { upsertNoteIdempotent } from './lib/noteFilters';
 import type {
   PublicUser,
@@ -25,7 +26,7 @@ type RoutePath = AppRoute | 'login' | 'not-found';
 
 function parsePathToRoute(pathname: string): RoutePath {
   if (pathname === '/' || pathname === '') return 'dashboard';
-  if (pathname === '/login') return 'login';
+  if (pathname === '/login' || pathname === '/join') return 'login';
   if (pathname === '/notes') return 'notes';
   if (pathname === '/memories') return 'memories';
   if (pathname === '/settings') return 'settings';
@@ -106,6 +107,9 @@ function InnerApp() {
   const [space, setSpace] = useState<SpaceSettings | null>(null);
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const [initialInviteCode, setInitialInviteCode] = useState<string | null>(null);
+  const [urlInviteCode, setUrlInviteCode] = useState<string | null>(() =>
+    extractInviteCodeFromSearch(window.location.search),
+  );
 
   const [notes, setNotes] = useState<SharedNote[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
@@ -117,7 +121,7 @@ function InnerApp() {
   const navigate = useCallback((nextRoute: RoutePath) => {
     setRoute(nextRoute);
     const nextPath = routeToPath(nextRoute);
-    if (window.location.pathname !== nextPath) {
+    if (window.location.pathname !== nextPath || window.location.search !== '') {
       window.history.pushState({}, '', nextPath);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -126,6 +130,7 @@ function InnerApp() {
   useEffect(() => {
     const onPopState = () => {
       setRoute(parsePathToRoute(window.location.pathname));
+      setUrlInviteCode(extractInviteCodeFromSearch(window.location.search));
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -176,7 +181,13 @@ function InnerApp() {
 
         if (spaceStatus.authenticated) {
           await loadAuthenticatedSpace();
-          if (!isCancelled?.() && window.location.pathname === '/login') {
+          if (
+            !isCancelled?.() &&
+            (window.location.pathname === '/login' ||
+              window.location.pathname === '/join' ||
+              window.location.search !== '')
+          ) {
+            setUrlInviteCode(null);
             navigate('dashboard');
           }
         } else if (!isCancelled?.()) {
@@ -283,6 +294,7 @@ function InnerApp() {
     _authedUser: PublicUser,
     createdInviteCode?: string,
   ) => {
+    setUrlInviteCode(null);
     if (createdInviteCode) {
       setInitialInviteCode(createdInviteCode);
     }
@@ -295,6 +307,7 @@ function InnerApp() {
     setUser(null);
     setNotes([]);
     setInitialInviteCode(null);
+    setUrlInviteCode(null);
     const freshStatus = await api.getAuthStatus().catch(() => status);
     if (freshStatus) setStatus(freshStatus);
     navigate('login');
@@ -367,7 +380,13 @@ function InnerApp() {
   }
 
   if (!user || !space) {
-    return <LoginPage status={status} onAuthenticated={handleAuthenticated} />;
+    return (
+      <LoginPage
+        status={status}
+        initialInviteCode={urlInviteCode}
+        onAuthenticated={handleAuthenticated}
+      />
+    );
   }
 
   const activeNavRoute: AppRoute =

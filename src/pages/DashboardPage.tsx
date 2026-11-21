@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowRight, Check, Copy, Lock } from 'lucide-react';
+import { ArrowRight, Check, Copy, Link2, Lock } from 'lucide-react';
 import { formatHeaderDate, formatNoteTimestamp } from '../lib/dateFormat';
+import { buildInviteLink } from '../lib/inviteLink';
 import type { PublicUser, SharedNote, SpaceSettings, SpaceStatus } from '../types/index';
 import { api } from '../utils/apiClient';
 import { CatDuoIllustration } from '../components/artwork/CatDuoIllustration';
@@ -44,7 +45,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 }) => {
   const { showToast } = useToast();
   const [inviteCode, setInviteCode] = useState<string | null>(initialInviteCode);
-  const [copied, setCopied] = useState(false);
+  const [copiedType, setCopiedType] = useState<'code' | 'link' | null>(null);
   const [generatingInvite, setGeneratingInvite] = useState(false);
 
   const partner = members.find((m) => m.id !== user.id) ?? null;
@@ -66,7 +67,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     try {
       const res = await api.rotateInvite();
       setInviteCode(res.inviteCode);
-      showToast('Fresh partner invite code generated.', 'success');
+      showToast('Fresh partner invite link & code generated.', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not create invite code.', 'error');
     } finally {
@@ -74,12 +75,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   };
 
-  const handleCopyInvite = async () => {
+  const handleCopyInvite = async (kind: 'code' | 'link') => {
     if (!inviteCode) return;
-    await navigator.clipboard.writeText(inviteCode).catch(() => undefined);
-    setCopied(true);
-    showToast('Invite code copied to clipboard.', 'success');
-    window.setTimeout(() => setCopied(false), 2000);
+    const text =
+      kind === 'link' ? buildInviteLink(window.location.origin, inviteCode) : inviteCode;
+    await navigator.clipboard.writeText(text).catch(() => undefined);
+    setCopiedType(kind);
+    showToast(
+      kind === 'link' ? 'Invite link copied to clipboard.' : 'Invite code copied to clipboard.',
+      'success',
+    );
+    window.setTimeout(() => setCopiedType((cur) => (cur === kind ? null : cur)), 2000);
   };
 
   return (
@@ -143,11 +149,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               Invite your partner to claim the second account
             </h2>
             <p className="mt-0.5 text-xs text-[#645E7B]">
-              Only one more account can ever join this space. Share a one-time invite code with
-              them.
+              Only one more account can ever join this space. Share a direct invite link or
+              one-time code with them.
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {inviteCode ? (
               <>
                 <code className="px-3 py-1.5 rounded-xl bg-white border border-[#6554A4]/20 text-xs font-semibold tracking-wider text-[#29253A] tabular-nums">
@@ -155,11 +161,27 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </code>
                 <button
                   type="button"
-                  onClick={handleCopyInvite}
+                  onClick={() => handleCopyInvite('link')}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6554A4] text-white text-xs font-medium hover:bg-[#534391] whitespace-nowrap"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copied' : 'Copy'}</span>
+                  {copiedType === 'link' ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : (
+                    <Link2 className="w-3.5 h-3.5" />
+                  )}
+                  <span>{copiedType === 'link' ? 'Link copied' : 'Copy invite link'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopyInvite('code')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#6554A4]/20 text-[#29253A] text-xs font-medium hover:bg-[#FAF9FE] whitespace-nowrap"
+                >
+                  {copiedType === 'code' ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                  <span>{copiedType === 'code' ? 'Code copied' : 'Copy code'}</span>
                 </button>
               </>
             ) : (
@@ -169,7 +191,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 onClick={handleGenerateInvite}
                 className="px-3.5 py-2 rounded-xl bg-[#6554A4] text-white text-xs font-medium hover:bg-[#534391] disabled:opacity-60 whitespace-nowrap"
               >
-                {generatingInvite ? 'Generating...' : 'Generate invite code'}
+                {generatingInvite ? 'Generating...' : 'Create invite link'}
               </button>
             )}
           </div>

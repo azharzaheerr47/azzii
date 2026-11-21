@@ -7,6 +7,7 @@ import express, {
 import rateLimit from 'express-rate-limit';
 import multer from 'multer';
 import {
+  changePasswordSchema,
   createNoteSchema,
   loginSchema,
   redeemInviteSchema,
@@ -26,6 +27,7 @@ import {
 } from '../auth/crypto';
 import {
   authenticateUser,
+  changeUserPassword,
   createFounderAccount,
   createNote,
   getSpaceSettings,
@@ -404,6 +406,36 @@ export function createApiRouter(): express.Router {
         res.json({ user: updated });
       } catch (err) {
         respondWithServerError(res, err, 'Failed to update profile.');
+      }
+    }),
+  );
+
+  // Change own password (requires verifying current password)
+  router.patch(
+    '/profile/password',
+    requireAuth,
+    writeLimiter,
+    asyncHandler(async (req, res) => {
+      const parsed = changePasswordSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid password input.' });
+        return;
+      }
+
+      try {
+        await changeUserPassword(
+          req.authUser!.id,
+          parsed.data.currentPassword,
+          parsed.data.newPassword,
+        );
+        res.json({ ok: true });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '';
+        if (msg === 'INVALID_CURRENT_PASSWORD') {
+          res.status(401).json({ error: 'Current password is incorrect.' });
+          return;
+        }
+        respondWithServerError(res, err, 'Failed to update password.');
       }
     }),
   );

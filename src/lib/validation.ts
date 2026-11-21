@@ -86,3 +86,8 @@ export const updateProfileSchema = z.object({
   avatarPreset: z.enum(AVATAR_PRESETS),
   avatar: z.string().trim().max(1000).optional(),
 });
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters').max(100),
+});

@@ -203,6 +203,12 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  changePassword: (payload: { currentPassword: string; newPassword: string }) =>
+    requestJson<{ ok: boolean }>('/api/profile/password', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
   listNotes: (params?: { search?: string; authorId?: string; sort?: 'newest' | 'oldest' }) => {
     const query = new URLSearchParams();
     if (params?.search) query.set('search', params.search);

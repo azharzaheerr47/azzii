@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Lock } from 'lucide-react';
+import { Eye, EyeOff, Link2, Lock } from 'lucide-react';
+import { normalizeInviteCode } from '../lib/inviteLink';
 import type { AvatarPreset, PublicUser, SpaceStatus } from '../types/index';
 import { api } from '../utils/apiClient';
 import { CatDuoIllustration } from '../components/artwork/CatDuoIllustration';
@@ -9,6 +10,7 @@ import { useToast } from '../components/ui/ToastProvider';
 
 interface LoginPageProps {
   status: SpaceStatus;
+  initialInviteCode?: string | null;
   onAuthenticated: (user: PublicUser, createdInviteCode?: string) => Promise<void>;
 }
 
@@ -20,19 +22,27 @@ const AVATAR_CHOICES: { id: AvatarPreset; label: string }[] = [
   { id: 'sky', label: 'Sky' },
 ];
 
-export const LoginPage: React.FC<LoginPageProps> = ({ status, onAuthenticated }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({
+  status,
+  initialInviteCode = null,
+  onAuthenticated,
+}) => {
   const { showToast } = useToast();
   const isFirstRun = !status.initialized;
   const canJoinWithInvite = status.initialized && status.userCount < status.maxUsers;
+  const normalizedUrlInvite = normalizeInviteCode(initialInviteCode);
 
-  const [mode, setMode] = useState<'setup' | 'login' | 'invite'>(
-    isFirstRun ? 'setup' : 'login',
-  );
+  const [mode, setMode] = useState<'setup' | 'login' | 'invite'>(() => {
+    if (isFirstRun) return 'setup';
+    if (canJoinWithInvite && normalizedUrlInvite) return 'invite';
+    return 'login';
+  });
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [inviteCode, setInviteCode] = useState(() => normalizedUrlInvite ?? '');
   const [avatarPreset, setAvatarPreset] = useState<AvatarPreset>(
     isFirstRun ? 'bat-cat' : 'bow-cat',
   );
@@ -118,8 +128,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ status, onAuthenticated })
                 Claim your shared space
               </h2>
               <p className="mt-1 text-sm text-[#645E7B]">
-                Create the first of two accounts. You will receive a private invite code for
-                your partner right after.
+                Create the first of two accounts. You will receive a private invite link and code
+                for your partner right after.
               </p>
             </div>
           ) : (
@@ -164,12 +174,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({ status, onAuthenticated })
                 </div>
               ) : null}
 
+              {normalizedUrlInvite && canJoinWithInvite && activeMode === 'invite' && (
+                <div className="mb-4 flex items-center gap-2 rounded-xl bg-[#E9DFFF]/55 border border-[#BFA7F2]/70 px-3.5 py-2.5 text-xs text-[#29253A]">
+                  <Link2 className="w-4 h-4 text-[#6554A4] shrink-0" />
+                  <span>
+                    Partner invite link applied (<strong className="font-semibold">{normalizedUrlInvite}</strong>). Complete your account details below to join.
+                  </span>
+                </div>
+              )}
+
+              {normalizedUrlInvite && !canJoinWithInvite && (
+                <div className="mb-4 flex items-center gap-2 rounded-xl bg-[#FAF9FE] border border-[#6554A4]/20 px-3.5 py-2.5 text-xs text-[#645E7B]">
+                  <Lock className="w-4 h-4 text-[#6554A4] shrink-0" />
+                  <span>
+                    Both partner seats are already claimed in this space. Sign in below with your registered email and password.
+                  </span>
+                </div>
+              )}
+
               <h2 className="font-display text-xl font-semibold text-[#29253A]">
                 {activeMode === 'invite' ? 'Join your partner' : 'Welcome back'}
               </h2>
               <p className="mt-1 text-sm text-[#645E7B]">
                 {activeMode === 'invite'
-                  ? 'Enter the invite code your partner shared with you to claim the second account.'
+                  ? 'Use the invite link or enter the code your partner shared to claim the second account.'
                   : 'Sign in with your private credentials to open your shared notes.'}
               </p>
             </div>
@@ -243,17 +271,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({ status, onAuthenticated })
               >
                 Password
               </label>
-              <input
-                id="auth-password"
-                type="password"
-                required
-                minLength={activeMode === 'login' ? 1 : 8}
-                autoComplete={activeMode === 'login' ? 'current-password' : 'new-password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={activeMode === 'login' ? 'Enter your password' : 'Minimum 8 characters'}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
-              />
+              <div className="relative">
+                <input
+                  id="auth-password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={activeMode === 'login' ? 1 : 8}
+                  autoComplete={activeMode === 'login' ? 'current-password' : 'new-password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={activeMode === 'login' ? 'Enter your password' : 'Minimum 8 characters'}
+                  className="w-full pl-3.5 pr-11 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  className="absolute inset-y-0 right-1.5 my-1 px-2 rounded-lg text-[#645E7B] hover:text-[#29253A] hover:bg-[#E9DFFF]/40 flex items-center justify-center transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             {(activeMode === 'setup' || activeMode === 'invite') && (
@@ -284,12 +323,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ status, onAuthenticated })
             )}
 
             {errorMsg && (
-              <p
+              <div
                 role="alert"
-                className="text-xs text-[#B91C1C] bg-[#FFF5F7] border border-[#E11D48]/20 rounded-xl px-3.5 py-2.5"
+                className="text-xs text-[#B91C1C] bg-[#FFF5F7] border border-[#E11D48]/20 rounded-xl px-3.5 py-2.5 space-y-1"
               >
-                {errorMsg}
-              </p>
+                <p className="font-medium">{errorMsg}</p>
+                {activeMode === 'login' && errorMsg.toLowerCase().includes('invalid email or password') && (
+                  <p className="text-[#9F1239]/90">
+                    Double-check your email address and use the eye icon to verify your password. Once signed in, you can change your password in Settings.
+                  </p>
+                )}
+              </div>
             )}
 
             <button
