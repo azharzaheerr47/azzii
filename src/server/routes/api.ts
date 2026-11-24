@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import multer from 'multer';
 import {
   changePasswordSchema,
+  createComplimentSchema,
   createNoteSchema,
   loginSchema,
   redeemInviteSchema,
@@ -28,8 +29,11 @@ import {
 import {
   authenticateUser,
   changeUserPassword,
+  createCompliment,
   createFounderAccount,
   createNote,
+  drawRandomCompliment,
+  getComplimentsOverview,
   getSpaceSettings,
   getSpaceStatus,
   getUserById,
@@ -38,6 +42,7 @@ import {
   redeemPartnerInvite,
   rotatePartnerInvite,
   signupWithNewSpace,
+  softDeleteComplimentByAuthor,
   softDeleteNoteByAuthor,
   updateNoteByAuthor,
   updateSpaceSettings,
@@ -581,6 +586,103 @@ export function createApiRouter(): express.Router {
           return;
         }
         respondWithServerError(res, err, 'Failed to delete note.');
+      }
+    }),
+  );
+
+  // Compliments Jar: get overview (written by user, drawn history, jar count for user)
+  router.get(
+    '/compliments',
+    requireAuth,
+    asyncHandler(async (req, res) => {
+      try {
+        const overview = await getComplimentsOverview(req.authUser!.id, req.authUser!.spaceId);
+        res.json(overview);
+      } catch (err) {
+        respondWithServerError(res, err, 'Failed to load compliments jar.');
+      }
+    }),
+  );
+
+  // Compliments Jar: drop a sweet compliment for your partner
+  router.post(
+    '/compliments',
+    requireAuth,
+    writeLimiter,
+    asyncHandler(async (req, res) => {
+      const parsed = createComplimentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid compliment.' });
+        return;
+      }
+
+      try {
+        const compliment = await createCompliment(
+          req.authUser!.id,
+          req.authUser!.spaceId,
+          parsed.data,
+        );
+        realtimeHub.broadcast(req.authUser!.spaceId, {
+          type: 'compliment:created',
+          payload: { recipientId: compliment.recipientId, authorId: compliment.authorId },
+        });
+        res.status(201).json({ compliment });
+      } catch (err) {
+        respondWithServerError(res, err, 'Failed to drop note into the jar.');
+      }
+    }),
+  );
+
+  // Compliments Jar: draw a non-repeating compliment written for the current user
+  router.post(
+    '/compliments/draw',
+    requireAuth,
+    writeLimiter,
+    asyncHandler(async (req, res) => {
+      try {
+        const result = await drawRandomCompliment(req.authUser!.id, req.authUser!.spaceId);
+        res.status(201).json(result);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '';
+        if (msg === 'EMPTY_JAR') {
+          res.status(404).json({
+            error: 'Your jar is waiting for a little love. Ask your partner to add a note first!',
+          });
+          return;
+        }
+        respondWithServerError(res, err, 'Failed to pick a note from the jar.');
+      }
+    }),
+  );
+
+  // Compliments Jar: soft-delete a compliment written by the current user
+  router.delete(
+    '/compliments/:id',
+    requireAuth,
+    writeLimiter,
+    asyncHandler(async (req, res) => {
+      try {
+        const deleted = await softDeleteComplimentByAuthor(
+          req.params.id,
+          req.authUser!.id,
+          req.authUser!.spaceId,
+        );
+        realtimeHub.broadcast(req.authUser!.spaceId, {
+          type: 'compliment:deleted',
+          payload: deleted,
+        });
+        res.json({ ok: true, id: deleted.id });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '';
+        if (msg === 'NOT_FOUND') {
+          res.status(404).json({ error: 'Compliment note not found.' });
+          return;
+        }
+        if (msg === 'FORBIDDEN') {
+          res.status(403).json({ error: 'You can only remove notes you wrote yourself.' });
+          return;
+        }
+        respondWithServerError(res, err, 'Failed to remove compliment note.');
       }
     }),
   );

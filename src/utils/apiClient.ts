@@ -1,5 +1,9 @@
 import type {
   AvatarPreset,
+  ComplimentCategory,
+  ComplimentDrawResult,
+  ComplimentItem,
+  ComplimentsOverview,
   NoteImage,
   NoteTone,
   PublicUser,
@@ -209,14 +213,19 @@ export const api = {
     spaceName: string;
     tagline: string;
     welcomeMessage: string;
-    logoStyle: 'cat-duo' | 'heart' | 'moon';
+    logoStyle: 'cat-duo' | 'heart' | 'moon' | 'sunflower';
   }) =>
     requestJson<{ space: SpaceSettings }>('/api/space', {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
 
-  updateProfile: (payload: { name: string; avatarPreset: AvatarPreset; avatar?: string }) =>
+  updateProfile: (payload: {
+    name: string;
+    avatarPreset: AvatarPreset;
+    avatar?: string;
+    bio?: string;
+  }) =>
     requestJson<{ user: PublicUser }>('/api/profile', {
       method: 'PATCH',
       body: JSON.stringify(payload),
@@ -227,6 +236,25 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
+
+  listCompliments: () => requestJson<ComplimentsOverview>('/api/compliments'),
+
+  createCompliment: (payload: { content: string; category: ComplimentCategory }) =>
+    requestJson<{ compliment: ComplimentItem }>('/api/compliments', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  drawCompliment: () =>
+    requestJson<ComplimentDrawResult>('/api/compliments/draw', {
+      method: 'POST',
+    }),
+
+  deleteCompliment: (complimentId: string) =>
+    requestJson<{ ok: boolean; id: string }>(
+      `/api/compliments/${encodeURIComponent(complimentId)}`,
+      { method: 'DELETE' },
+    ),
 
   listNotes: (params?: { search?: string; authorId?: string; sort?: 'newest' | 'oldest' }) => {
     const query = new URLSearchParams();

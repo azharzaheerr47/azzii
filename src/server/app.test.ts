@@ -366,6 +366,117 @@ test('Vercel serverless Express handler serves API, rewrites, JSON errors, 503 o
       }),
     });
     assert.equal(space2PartnerRes.status, 201);
+    const space2Partner = (await space2PartnerRes.json()) as { sessionToken: string };
+
+    // 9. Profile bio update works cleanly
+    const bioRes = await fetch(`${baseUrl}/api/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Signup.sessionToken}`,
+      },
+      body: JSON.stringify({
+        name: 'Azhar',
+        avatarPreset: 'bat-cat',
+        bio: 'Sunflowers & late night tea',
+      }),
+    });
+    assert.equal(bioRes.status, 200);
+    const bioData = (await bioRes.json()) as { user: { bio: string } };
+    assert.equal(bioData.user.bio, 'Sunflowers & late night tea');
+
+    // 10. Compliments Jar: Azhar writes 3 compliments for Sam, Sam draws without repeats & cannot delete Azhar's notes
+    const compIds: string[] = [];
+    for (const [idx, text] of [
+      'Your laugh makes every day lighter.',
+      'Thank you for bringing me warm coffee.',
+      'I adore the way you notice little details.',
+    ].entries()) {
+      const cRes = await fetch(`${baseUrl}/api/compliments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          Authorization: `Bearer ${space2Signup.sessionToken}`,
+        },
+        body: JSON.stringify({
+          content: text,
+          category: idx === 0 ? 'Your smile' : 'Something I adore',
+        }),
+      });
+      assert.equal(cRes.status, 201);
+      const createdComp = (await cRes.json()) as { compliment: { id: string } };
+      compIds.push(createdComp.compliment.id);
+    }
+
+    // Sam's overview hides unseen compliment contents before drawing
+    const samOverviewRes = await fetch(`${baseUrl}/api/compliments`, {
+      headers: { Authorization: `Bearer ${space2Partner.sessionToken}` },
+    });
+    assert.equal(samOverviewRes.status, 200);
+    const samOverviewRaw = await samOverviewRes.text();
+    assert.equal(samOverviewRaw.includes('warm coffee'), false);
+    const samOverview = JSON.parse(samOverviewRaw) as {
+      totalInJarForMe: number;
+      remainingInCycle: number;
+      drawnHistory: unknown[];
+    };
+    assert.equal(samOverview.totalInJarForMe, 3);
+    assert.equal(samOverview.remainingInCycle, 3);
+    assert.equal(samOverview.drawnHistory.length, 0);
+
+    // Sam draws 3 notes: all 3 unique IDs, no repeats
+    const drawnIds: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const drawRes = await fetch(`${baseUrl}/api/compliments/draw`, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          Authorization: `Bearer ${space2Partner.sessionToken}`,
+        },
+      });
+      assert.equal(drawRes.status, 201);
+      const drawJson = (await drawRes.json()) as {
+        draw: { compliment: { id: string } };
+        cycleReset: boolean;
+      };
+      assert.equal(drawJson.cycleReset, false);
+      drawnIds.push(drawJson.draw.compliment.id);
+    }
+    assert.equal(new Set(drawnIds).size, 3);
+
+    // 4th draw starts a fresh cycle
+    const round2Res = await fetch(`${baseUrl}/api/compliments/draw`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Partner.sessionToken}`,
+      },
+    });
+    assert.equal(round2Res.status, 201);
+    const round2Json = (await round2Res.json()) as { cycleReset: boolean };
+    assert.equal(round2Json.cycleReset, true);
+
+    // Sam cannot delete Azhar's compliment (403)
+    const samDelRes = await fetch(`${baseUrl}/api/compliments/${compIds[0]}`, {
+      method: 'DELETE',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Partner.sessionToken}`,
+      },
+    });
+    assert.equal(samDelRes.status, 403);
+
+    // Azhar CAN delete his own compliment (200)
+    const azharDelRes = await fetch(`${baseUrl}/api/compliments/${compIds[0]}`, {
+      method: 'DELETE',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Signup.sessionToken}`,
+      },
+    });
+    assert.equal(azharDelRes.status, 200);
   } finally {
     fs.rmSync(TEMP_DB, { recursive: true, force: true });
     await new Promise<void>((resolve, reject) =>

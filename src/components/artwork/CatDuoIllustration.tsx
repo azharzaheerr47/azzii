@@ -195,9 +195,32 @@ export const CatDuoIllustration: React.FC<CatDuoIllustrationProps> = ({
 };
 
 export const SpaceBrandMark: React.FC<{
-  style?: 'cat-duo' | 'heart' | 'moon';
+  style?: 'cat-duo' | 'heart' | 'moon' | 'sunflower';
   className?: string;
 }> = ({ style = 'cat-duo', className = 'w-9 h-9' }) => {
+  if (style === 'sunflower') {
+    return (
+      <svg viewBox="0 0 40 40" className={className} fill="none" aria-hidden="true">
+        <rect width="40" height="40" rx="12" fill="#FFF9EA" />
+        <g transform="translate(20, 20)">
+          {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+            <ellipse
+              key={deg}
+              cx="0"
+              cy="-9.5"
+              rx="2.9"
+              ry="5.5"
+              transform={`rotate(${deg})`}
+              fill={deg % 60 === 0 ? '#FFD45A' : '#F3BB38'}
+            />
+          ))}
+          <circle cx="0" cy="0" r="6" fill="#5B3E2B" />
+          <circle cx="-1.8" cy="-1.5" r="0.9" fill="#FFD45A" fillOpacity="0.8" />
+          <circle cx="1.8" cy="1.2" r="0.9" fill="#FFD45A" fillOpacity="0.8" />
+        </g>
+      </svg>
+    );
+  }
   if (style === 'heart') {
     return (
       <svg viewBox="0 0 40 40" className={className} fill="none" aria-hidden="true">

@@ -1,26 +1,32 @@
 import React, { Component, useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { formatNoteTimestamp } from './lib/dateFormat';
 import { extractInviteCodeFromSearch } from './lib/inviteLink';
 import { upsertNoteIdempotent } from './lib/noteFilters';
 import type {
+  ComplimentsOverview,
   PublicUser,
   RealtimeEvent,
   SharedNote,
   SpaceSettings,
   SpaceStatus,
+  StickerId,
 } from './types/index';
 import { api, ApiRequestError } from './utils/apiClient';
 import { useRealtimeSync } from './hooks/useRealtimeSync';
-import { AppShell, type AppRoute } from './components/layout/AppShell';
+import { SunflowerBloomIntro } from './components/artwork/SunflowerIllustration';
+import { AppShell, type AppRoute, type AppearanceTheme } from './components/layout/AppShell';
 import { ImageLightbox, type LightboxImageItem } from './components/ui/ImageLightbox';
 import { PageSkeleton } from './components/ui/SkeletonLoaders';
 import { ToastProvider, useToast } from './components/ui/ToastProvider';
+import { ComplimentsJarPage } from './pages/ComplimentsJarPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { MemoriesPage } from './pages/MemoriesPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { NotesPage } from './pages/NotesPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { StickersPage } from './pages/StickersPage';
 
 type RoutePath = AppRoute | 'login' | 'not-found';
 
@@ -29,6 +35,8 @@ function parsePathToRoute(pathname: string): RoutePath {
   if (pathname === '/login' || pathname === '/join') return 'login';
   if (pathname === '/notes') return 'notes';
   if (pathname === '/memories') return 'memories';
+  if (pathname === '/jar') return 'jar';
+  if (pathname === '/stickers') return 'stickers';
   if (pathname === '/settings') return 'settings';
   return 'not-found';
 }
@@ -43,6 +51,10 @@ function routeToPath(route: RoutePath): string {
       return '/notes';
     case 'memories':
       return '/memories';
+    case 'jar':
+      return '/jar';
+    case 'stickers':
+      return '/stickers';
     case 'settings':
       return '/settings';
     default:
@@ -66,12 +78,12 @@ class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#FAF9FE] flex items-center justify-center p-6">
+        <div className="min-h-screen bg-[#FCFAFF] flex items-center justify-center p-6">
           <div className="max-w-md w-full bg-white border border-[#6554A4]/20 rounded-2xl p-6 text-center">
             <h1 className="font-display text-xl font-bold text-[#29253A]">
               Something went sideways
             </h1>
-            <p className="mt-2 text-sm text-[#645E7B]">
+            <p className="mt-2 text-sm text-[#817B90]">
               {this.state.message || 'An unexpected display error occurred.'}
             </p>
             <button
@@ -113,6 +125,30 @@ function InnerApp() {
 
   const [notes, setNotes] = useState<SharedNote[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
+  const [complimentsSummary, setComplimentsSummary] = useState<ComplimentsOverview | null>(null);
+  const [complimentRefreshSignal, setComplimentRefreshSignal] = useState(0);
+  const [preselectedSticker, setPreselectedSticker] = useState<StickerId | null>(null);
+
+  // Signature Sunflower Bloom Intro (runs once per interactive sign-in / sign-up)
+  const [showBloomIntro, setShowBloomIntro] = useState(false);
+
+  // Appearance preference (Soft Lavender vs Sunflower Cream)
+  const [appearance, setAppearance] = useState<AppearanceTheme>(() => {
+    try {
+      return window.localStorage.getItem('ols_appearance') === 'cream' ? 'cream' : 'lavender';
+    } catch {
+      return 'lavender';
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-appearance', appearance);
+    try {
+      window.localStorage.setItem('ols_appearance', appearance);
+    } catch {
+      // ignore storage failures
+    }
+  }, [appearance]);
 
   // Lightbox state
   const [lightboxItems, setLightboxItems] = useState<LightboxImageItem[]>([]);
@@ -163,8 +199,12 @@ function InnerApp() {
 
     if (!options?.silent) setLoadingNotes(true);
     try {
-      const notesRes = await api.listNotes();
+      const [notesRes, complimentsRes] = await Promise.all([
+        api.listNotes(),
+        api.listCompliments().catch(() => null),
+      ]);
       setNotes(notesRes.notes);
+      if (complimentsRes) setComplimentsSummary(complimentsRes);
     } finally {
       if (!options?.silent) setLoadingNotes(false);
     }
@@ -239,6 +279,14 @@ function InnerApp() {
       case 'note:deleted':
         setNotes((prev) => upsertNoteIdempotent(prev, event.payload));
         break;
+      case 'compliment:created':
+      case 'compliment:deleted':
+        setComplimentRefreshSignal((c) => c + 1);
+        api
+          .listCompliments()
+          .then(setComplimentsSummary)
+          .catch(() => undefined);
+        break;
       case 'space:updated':
         setSpace(event.payload);
         break;
@@ -294,11 +342,15 @@ function InnerApp() {
     _authedUser: PublicUser,
     createdInviteCode?: string,
   ) => {
+    const skipIntro = window.location.search.includes('autostart=1');
     setUrlInviteCode(null);
     if (createdInviteCode) {
       setInitialInviteCode(createdInviteCode);
     }
     await loadAuthenticatedSpace();
+    if (!skipIntro) {
+      setShowBloomIntro(true);
+    }
     navigate('dashboard');
   };
 
@@ -306,8 +358,10 @@ function InnerApp() {
     await api.logout().catch(() => undefined);
     setUser(null);
     setNotes([]);
+    setComplimentsSummary(null);
     setInitialInviteCode(null);
     setUrlInviteCode(null);
+    setShowBloomIntro(false);
     const freshStatus = await api.getAuthStatus().catch(() => status);
     if (freshStatus) setStatus(freshStatus);
     navigate('login');
@@ -356,16 +410,16 @@ function InnerApp() {
 
   if (bootError || !status) {
     return (
-      <div className="min-h-screen bg-[#FAF9FE] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-[#FCFAFF] flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white border border-[#6554A4]/20 rounded-2xl p-6 text-center">
           <h1 className="font-display text-lg font-bold text-[#29253A]">
             {bootError?.title || 'Could not connect to Our Little Space'}
           </h1>
-          <p className="mt-2 text-sm text-[#645E7B]">
+          <p className="mt-2 text-sm text-[#817B90]">
             {bootError?.message || 'Unable to load application status.'}
           </p>
           {bootError?.detail && (
-            <p className="mt-2 text-xs text-[#645E7B]/80 font-mono">{bootError.detail}</p>
+            <p className="mt-2 text-xs text-[#817B90]/80 font-mono">{bootError.detail}</p>
           )}
           <button
             type="button"
@@ -390,12 +444,26 @@ function InnerApp() {
   }
 
   const activeNavRoute: AppRoute =
-    route === 'notes' || route === 'memories' || route === 'settings'
+    route === 'notes' ||
+    route === 'memories' ||
+    route === 'jar' ||
+    route === 'stickers' ||
+    route === 'settings'
       ? route
       : 'dashboard';
 
   return (
     <>
+      <AnimatePresence>
+        {showBloomIntro && (
+          <SunflowerBloomIntro
+            spaceName={space.spaceName}
+            userName={user.name}
+            onComplete={() => setShowBloomIntro(false)}
+          />
+        )}
+      </AnimatePresence>
+
       <AppShell
         currentRoute={activeNavRoute}
         onNavigate={navigate}
@@ -403,6 +471,7 @@ function InnerApp() {
         user={user}
         members={members}
         onlineUserIds={onlineUserIds}
+        appearance={appearance}
         onLogout={handleLogout}
       >
         {route === 'dashboard' && (
@@ -415,6 +484,7 @@ function InnerApp() {
             loadingNotes={loadingNotes}
             onlineUserIds={onlineUserIds}
             initialInviteCode={initialInviteCode}
+            complimentsSummary={complimentsSummary}
             onNoteCreated={(n) => setNotes((prev) => upsertNoteIdempotent(prev, n))}
             onNoteUpdated={(n) => setNotes((prev) => upsertNoteIdempotent(prev, n))}
             onNoteDeleted={(n) => setNotes((prev) => upsertNoteIdempotent(prev, n))}
@@ -430,6 +500,8 @@ function InnerApp() {
             notes={notes}
             loadingNotes={loadingNotes}
             onlineUserIds={onlineUserIds}
+            initialSticker={preselectedSticker}
+            onConsumeInitialSticker={() => setPreselectedSticker(null)}
             onNoteCreated={(n) => setNotes((prev) => upsertNoteIdempotent(prev, n))}
             onNoteUpdated={(n) => setNotes((prev) => upsertNoteIdempotent(prev, n))}
             onNoteDeleted={(n) => setNotes((prev) => upsertNoteIdempotent(prev, n))}
@@ -441,7 +513,25 @@ function InnerApp() {
           <MemoriesPage
             members={members}
             notes={notes}
+            onNoteCreated={(n) => setNotes((prev) => upsertNoteIdempotent(prev, n))}
             onOpenImage={handleOpenImage}
+          />
+        )}
+
+        {route === 'jar' && (
+          <ComplimentsJarPage
+            user={user}
+            members={members}
+            refreshSignal={complimentRefreshSignal}
+          />
+        )}
+
+        {route === 'stickers' && (
+          <StickersPage
+            onUseStickerInNote={(stickerId) => {
+              setPreselectedSticker(stickerId);
+              navigate('notes');
+            }}
           />
         )}
 
@@ -451,6 +541,8 @@ function InnerApp() {
             members={members}
             space={space}
             status={status}
+            appearance={appearance}
+            onChangeAppearance={setAppearance}
             onSpaceUpdated={setSpace}
             onUserUpdated={(updated) => {
               setUser(updated);

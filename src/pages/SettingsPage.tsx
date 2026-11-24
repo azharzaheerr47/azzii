@@ -5,6 +5,7 @@ import type { AvatarPreset, PublicUser, SpaceSettings, SpaceStatus } from '../ty
 import { api } from '../utils/apiClient';
 import { SpaceBrandMark } from '../components/artwork/CatDuoIllustration';
 import { PartnerAvatar } from '../components/artwork/PartnerAvatar';
+import type { AppearanceTheme } from '../components/layout/AppShell';
 import { useToast } from '../components/ui/ToastProvider';
 
 interface SettingsPageProps {
@@ -12,6 +13,8 @@ interface SettingsPageProps {
   members: PublicUser[];
   space: SpaceSettings;
   status: SpaceStatus;
+  appearance: AppearanceTheme;
+  onChangeAppearance: (theme: AppearanceTheme) => void;
   onSpaceUpdated: (space: SpaceSettings) => void;
   onUserUpdated: (user: PublicUser) => void;
   onLogout: () => void;
@@ -25,8 +28,9 @@ const AVATAR_CHOICES: { id: AvatarPreset; label: string }[] = [
   { id: 'sky', label: 'Sky' },
 ];
 
-const LOGO_CHOICES: { id: 'cat-duo' | 'heart' | 'moon'; label: string }[] = [
+const LOGO_CHOICES: { id: 'cat-duo' | 'heart' | 'moon' | 'sunflower'; label: string }[] = [
   { id: 'cat-duo', label: 'Cat Duo' },
+  { id: 'sunflower', label: 'Sunflower' },
   { id: 'heart', label: 'Pastel Heart' },
   { id: 'moon', label: 'Cozy Moon' },
 ];
@@ -36,6 +40,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   members,
   space,
   status,
+  appearance,
+  onChangeAppearance,
   onSpaceUpdated,
   onUserUpdated,
   onLogout,
@@ -46,11 +52,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [spaceName, setSpaceName] = useState(space.spaceName);
   const [tagline, setTagline] = useState(space.tagline);
   const [welcomeMessage, setWelcomeMessage] = useState(space.welcomeMessage);
-  const [logoStyle, setLogoStyle] = useState<'cat-duo' | 'heart' | 'moon'>(space.logoStyle);
+  const [logoStyle, setLogoStyle] = useState<'cat-duo' | 'heart' | 'moon' | 'sunflower'>(
+    space.logoStyle,
+  );
   const [savingSpace, setSavingSpace] = useState(false);
 
   // Profile form state
   const [displayName, setDisplayName] = useState(user.name);
+  const [bio, setBio] = useState(user.bio ?? '');
   const [avatarPreset, setAvatarPreset] = useState<AvatarPreset>(user.avatarPreset);
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -93,6 +102,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       const res = await api.updateProfile({
         name: displayName,
         avatarPreset,
+        bio: bio.trim(),
       });
       onUserUpdated(res.user);
       showToast('Profile updated.', 'success');
@@ -280,6 +290,24 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           </div>
 
           <div>
+            <label
+              htmlFor="settings-bio"
+              className="block text-xs font-medium text-[#29253A] mb-1.5"
+            >
+              Short bio or mood <span className="font-normal text-[#817B90]">(optional)</span>
+            </label>
+            <input
+              id="settings-bio"
+              type="text"
+              maxLength={160}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="e.g., Currently craving iced matcha & late night walks"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/25"
+            />
+          </div>
+
+          <div>
             <span className="block text-xs font-medium text-[#29253A] mb-2">Avatar style</span>
             <div className="flex flex-wrap gap-2.5">
               {AVATAR_CHOICES.map((choice) => (
@@ -311,6 +339,54 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </button>
           </div>
         </form>
+      </section>
+
+      {/* Appearance Theme */}
+      <section className="bg-white border border-[#6554A4]/14 rounded-2xl p-6 space-y-4">
+        <div>
+          <h2 className="font-display text-lg font-semibold text-[#29253A]">Appearance</h2>
+          <p className="mt-0.5 text-xs text-[#817B90]">
+            Choose the backdrop tone you prefer on this device.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Appearance backdrop">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={appearance === 'lavender'}
+            onClick={() => onChangeAppearance('lavender')}
+            className={`text-left p-4 rounded-xl border transition-all flex items-center gap-3 ${
+              appearance === 'lavender'
+                ? 'bg-[#E9DFFF]/40 border-[#6554A4] ring-1 ring-[#6554A4]/30'
+                : 'bg-white border-[#6554A4]/15 hover:border-[#6554A4]/35'
+            }`}
+          >
+            <span className="w-8 h-8 rounded-full bg-[#FCFAFF] border border-[#BFA7F2] shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-[#29253A]">Soft Lavender</p>
+              <p className="text-xs text-[#817B90]">Airy lavender & crisp white</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            role="radio"
+            aria-checked={appearance === 'cream'}
+            onClick={() => onChangeAppearance('cream')}
+            className={`text-left p-4 rounded-xl border transition-all flex items-center gap-3 ${
+              appearance === 'cream'
+                ? 'bg-[#FFF9EA] border-[#F3BB38] ring-1 ring-[#F3BB38]/40'
+                : 'bg-white border-[#6554A4]/15 hover:border-[#6554A4]/35'
+            }`}
+          >
+            <span className="w-8 h-8 rounded-full bg-[#FFF9EA] border border-[#F3BB38] shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-[#29253A]">Sunflower Cream</p>
+              <p className="text-xs text-[#817B90]">Sunlit warm cream canvas</p>
+            </div>
+          </button>
+        </div>
       </section>
 
       {/* Change Password */}

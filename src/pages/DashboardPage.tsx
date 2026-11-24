@@ -1,11 +1,28 @@
-import React, { useState } from 'react';
-import { ArrowRight, Check, Copy, Link2, Lock } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  Copy,
+  Images,
+  Link2,
+  Lock,
+  Sparkles,
+  Sticker,
+} from 'lucide-react';
 import { formatHeaderDate, formatNoteTimestamp } from '../lib/dateFormat';
 import { buildInviteLink } from '../lib/inviteLink';
-import type { PublicUser, SharedNote, SpaceSettings, SpaceStatus } from '../types/index';
+import type {
+  ComplimentsOverview,
+  PublicUser,
+  SharedNote,
+  SpaceSettings,
+  SpaceStatus,
+} from '../types/index';
 import { api } from '../utils/apiClient';
 import { CatDuoIllustration } from '../components/artwork/CatDuoIllustration';
 import { PartnerAvatar } from '../components/artwork/PartnerAvatar';
+import { SunflowerAccent } from '../components/artwork/SunflowerIllustration';
 import type { AppRoute } from '../components/layout/AppShell';
 import { NoteCard } from '../components/notes/NoteCard';
 import { NoteComposer } from '../components/notes/NoteComposer';
@@ -21,11 +38,26 @@ interface DashboardPageProps {
   loadingNotes: boolean;
   onlineUserIds: string[];
   initialInviteCode: string | null;
+  complimentsSummary: ComplimentsOverview | null;
   onNoteCreated: (note: SharedNote) => void;
   onNoteUpdated: (note: SharedNote) => void;
   onNoteDeleted: (note: SharedNote) => void;
   onOpenImage: (note: SharedNote, imageIndex: number) => void;
   onNavigate: (route: AppRoute) => void;
+}
+
+const DAILY_QUOTES = [
+  'Little moments become favorite memories when kept together.',
+  'Like sunflowers turning toward the sun, always finding warmth in each other.',
+  'Even ordinary Tuesdays feel softer when we share a note.',
+  'A private corner of calm, laughter, and reminders that you are loved.',
+];
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -37,6 +69,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   loadingNotes,
   onlineUserIds,
   initialInviteCode,
+  complimentsSummary,
   onNoteCreated,
   onNoteUpdated,
   onNoteDeleted,
@@ -49,18 +82,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [generatingInvite, setGeneratingInvite] = useState(false);
 
   const partner = members.find((m) => m.id !== user.id) ?? null;
-  const recentNotes = notes.slice(0, 8);
+  const activeNotes = useMemo(() => notes.filter((n) => !n.isDeleted), [notes]);
+  const recentNotes = notes.slice(0, 6);
 
-  const galleryItems = notes
-    .filter((n) => !n.isDeleted && n.images.length > 0)
-    .flatMap((n) =>
-      n.images.map((img, idx) => ({
-        note: n,
-        image: img,
-        indexInNote: idx,
-      })),
-    )
-    .slice(0, 6);
+  const galleryItems = useMemo(
+    () =>
+      notes
+        .filter((n) => !n.isDeleted && n.images.length > 0)
+        .flatMap((n) =>
+          n.images.map((img, idx) => ({
+            note: n,
+            image: img,
+            indexInNote: idx,
+          })),
+        ),
+    [notes],
+  );
+  const recentGallery = galleryItems.slice(0, 4);
+
+  const dailyQuote = useMemo(() => {
+    const dayIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+    return DAILY_QUOTES[dayIndex % DAILY_QUOTES.length];
+  }, []);
 
   const handleGenerateInvite = async () => {
     setGeneratingInvite(true);
@@ -88,55 +131,64 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     window.setTimeout(() => setCopiedType((cur) => (cur === kind ? null : cur)), 2000);
   };
 
+  const jarCount = complimentsSummary?.totalInJarForMe ?? 0;
+
   return (
     <div className="space-y-8">
-      {/* Personal Welcome Header */}
-      <section className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-[#6554A4]/12">
-        <div className="space-y-1.5 max-w-2xl">
-          <div className="flex flex-wrap items-center gap-x-2 text-xs text-[#645E7B]">
-            <span className="inline-flex items-center gap-1 font-medium text-[#6554A4]">
-              <Lock className="w-3.5 h-3.5" />
-              <span>Private space for two</span>
-            </span>
-            <span aria-hidden="true">·</span>
-            <time className="tabular-nums">{formatHeaderDate()}</time>
+      {/* Sunflower-Warmed Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#FFF9EA]/90 via-white to-[#E9DFFF]/40 border border-[#F3BB38]/35 rounded-3xl p-6 sm:p-8 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2.5 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-x-2 text-xs text-[#817B90]">
+              <span className="inline-flex items-center gap-1 font-medium text-[#6554A4]">
+                <Lock className="w-3.5 h-3.5" />
+                <span>Private space for two</span>
+              </span>
+              <span aria-hidden="true">·</span>
+              <time className="tabular-nums">{formatHeaderDate()}</time>
+            </div>
+
+            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[#29253A] text-balance">
+              {getGreeting()}, {user.name}
+            </h1>
+            <p className="text-sm sm:text-[15px] text-[#817B90] leading-relaxed">
+              {space.welcomeMessage}
+            </p>
+            <p className="text-xs italic text-[#817B90]/95 pt-1">
+              “{dailyQuote}”
+            </p>
           </div>
 
-          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[#29253A] text-balance">
-            Hi {user.name}, welcome to {space.spaceName}
-          </h1>
-          <p className="text-sm sm:text-[15px] text-[#645E7B] leading-relaxed">
-            {space.welcomeMessage}
-          </p>
-        </div>
-
-        {/* Partner Avatars Duo */}
-        <div className="flex items-center gap-3 self-start md:self-auto">
-          <div className="flex items-center gap-2 bg-white border border-[#6554A4]/14 rounded-2xl px-3.5 py-2">
-            <div className="flex items-center -space-x-2">
-              {members.map((m) => (
-                <PartnerAvatar
-                  key={m.id}
-                  name={m.name}
-                  preset={m.avatarPreset}
-                  avatarUrl={m.avatar}
-                  size="sm"
-                  isOnline={onlineUserIds.includes(m.id)}
-                />
-              ))}
+          <div className="flex items-center gap-4 self-start md:self-auto shrink-0">
+            <div className="flex items-center gap-3 bg-white/95 border border-[#6554A4]/14 rounded-2xl px-4 py-3 shadow-2xs">
+              <div className="flex items-center -space-x-2">
+                {members.map((m) => (
+                  <PartnerAvatar
+                    key={m.id}
+                    name={m.name}
+                    preset={m.avatarPreset}
+                    avatarUrl={m.avatar}
+                    size="sm"
+                    isOnline={onlineUserIds.includes(m.id)}
+                  />
+                ))}
+              </div>
+              <div className="text-xs leading-snug">
+                <p className="font-semibold text-[#29253A]">
+                  {partner ? `${user.name} & ${partner.name}` : `${user.name} · Waiting for partner`}
+                </p>
+                <p className="text-[#817B90]">
+                  {partner
+                    ? partner.bio
+                      ? partner.bio
+                      : onlineUserIds.includes(partner.id)
+                        ? `${partner.name} is here now`
+                        : 'Shared space synced'
+                    : '1 of 2 seats active'}
+                </p>
+              </div>
             </div>
-            <div className="text-xs leading-tight pl-1">
-              <p className="font-semibold text-[#29253A]">
-                {partner ? `${user.name} & ${partner.name}` : `${user.name} · Waiting for partner`}
-              </p>
-              <p className="text-[#645E7B]">
-                {partner
-                  ? onlineUserIds.includes(partner.id)
-                    ? `${partner.name} is here now`
-                    : 'Shared space synced'
-                  : '1 of 2 seats active'}
-              </p>
-            </div>
+            <SunflowerAccent className="hidden sm:block w-14 h-14 shrink-0" />
           </div>
         </div>
       </section>
@@ -148,7 +200,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <h2 className="font-display text-sm font-semibold text-[#29253A]">
               Invite your partner to claim the second account
             </h2>
-            <p className="mt-0.5 text-xs text-[#645E7B]">
+            <p className="mt-0.5 text-xs text-[#817B90]">
               Only one more account can ever join this space. Share a direct invite link or
               one-time code with them.
             </p>
@@ -174,7 +226,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <button
                   type="button"
                   onClick={() => handleCopyInvite('code')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#6554A4]/20 text-[#29253A] text-xs font-medium hover:bg-[#FAF9FE] whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#6554A4]/20 text-[#29253A] text-xs font-medium hover:bg-[#FCFAFF] whitespace-nowrap"
                 >
                   {copiedType === 'code' ? (
                     <Check className="w-3.5 h-3.5" />
@@ -198,7 +250,74 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </section>
       )}
 
-      {/* Main Content Grid: Composer + Feed on Left, Memories & Space Summary on Right */}
+      {/* Quick Access Grid */}
+      <section aria-label="Quick access" className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <button
+          type="button"
+          onClick={() => onNavigate('notes')}
+          className="group text-left bg-white hover:bg-[#E9DFFF]/30 border border-[#6554A4]/14 rounded-2xl p-4 sm:p-5 transition-colors"
+        >
+          <div className="w-9 h-9 rounded-xl bg-[#E9DFFF]/70 flex items-center justify-center mb-3">
+            <BookOpen className="w-4 h-4 text-[#6554A4]" />
+          </div>
+          <h2 className="font-display text-sm font-semibold text-[#29253A] group-hover:text-[#6554A4] transition-colors">
+            Our Notes
+          </h2>
+          <p className="mt-0.5 text-xs text-[#817B90] tabular-nums">
+            {activeNotes.length} {activeNotes.length === 1 ? 'note' : 'notes'} shared
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate('memories')}
+          className="group text-left bg-white hover:bg-[#FFD6E7]/30 border border-[#6554A4]/14 rounded-2xl p-4 sm:p-5 transition-colors"
+        >
+          <div className="w-9 h-9 rounded-xl bg-[#FFD6E7]/75 flex items-center justify-center mb-3">
+            <Images className="w-4 h-4 text-[#29253A]" />
+          </div>
+          <h2 className="font-display text-sm font-semibold text-[#29253A] group-hover:text-[#6554A4] transition-colors">
+            Our Memories
+          </h2>
+          <p className="mt-0.5 text-xs text-[#817B90] tabular-nums">
+            {galleryItems.length} {galleryItems.length === 1 ? 'photo' : 'photos'} kept
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate('jar')}
+          className="group text-left bg-[#FFF9EA]/70 hover:bg-[#FFF9EA] border border-[#F3BB38]/40 rounded-2xl p-4 sm:p-5 transition-colors"
+        >
+          <div className="w-9 h-9 rounded-xl bg-[#FFD45A]/75 flex items-center justify-center mb-3">
+            <Sparkles className="w-4 h-4 text-[#29253A]" />
+          </div>
+          <h2 className="font-display text-sm font-semibold text-[#29253A] group-hover:text-[#6554A4] transition-colors">
+            Compliments Jar
+          </h2>
+          <p className="mt-0.5 text-xs text-[#817B90] tabular-nums">
+            {jarCount > 0 ? `${jarCount} waiting for you` : 'Pick or leave a love note'}
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate('stickers')}
+          className="group text-left bg-white hover:bg-[#D8E9FF]/40 border border-[#6554A4]/14 rounded-2xl p-4 sm:p-5 transition-colors"
+        >
+          <div className="w-9 h-9 rounded-xl bg-[#D8E9FF]/80 flex items-center justify-center mb-3">
+            <Sticker className="w-4 h-4 text-[#29253A]" />
+          </div>
+          <h2 className="font-display text-sm font-semibold text-[#29253A] group-hover:text-[#6554A4] transition-colors">
+            Stickers
+          </h2>
+          <p className="mt-0.5 text-xs text-[#817B90]">
+            17 custom keepsakes
+          </p>
+        </button>
+      </section>
+
+      {/* Main Content Grid: Composer + Feed on Left, Memories & Jar Snapshot on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-8 space-y-6">
           <NoteComposer onCreated={onNoteCreated} />
@@ -231,9 +350,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <h3 className="font-display text-base font-semibold text-[#29253A]">
                   Your shared journal is ready
                 </h3>
-                <p className="mt-1 text-sm text-[#645E7B] max-w-sm">
-                  Write your first note above, attach a favorite snapshot, or leave a cute cat
-                  sticker for your partner to find.
+                <p className="mt-1 text-sm text-[#817B90] max-w-sm">
+                  Write your first note above, attach a favorite snapshot, or leave a sweet
+                  sunflower sticker for your partner to find.
                 </p>
               </div>
             ) : (
@@ -254,7 +373,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </section>
         </div>
 
-        {/* Sidebar: Memories Snapshot */}
+        {/* Sidebar: Memories Snapshot + Compliments Jar Invitation */}
         <aside className="lg:col-span-4 space-y-6">
           <section className="bg-white border border-[#6554A4]/14 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
@@ -270,20 +389,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </button>
             </div>
 
-            {galleryItems.length === 0 ? (
-              <p className="text-xs text-[#645E7B] leading-relaxed py-4">
-                Photos attached to your notes will appear here as a shared visual keepsake
-                wall.
+            {recentGallery.length === 0 ? (
+              <p className="text-xs text-[#817B90] leading-relaxed py-4">
+                Photos uploaded in Memories or attached to notes will gather here as your shared
+                keepsake wall.
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-2">
-                {galleryItems.map((entry) => (
+                {recentGallery.map((entry) => (
                   <button
                     key={entry.image.id}
                     type="button"
                     onClick={() => onOpenImage(entry.note, entry.indexInNote)}
                     aria-label={`View memory shared by ${entry.note.authorName} on ${formatNoteTimestamp(entry.note.createdAt)}`}
-                    className="group relative aspect-square rounded-xl overflow-hidden bg-[#FAF9FE] border border-[#6554A4]/10"
+                    className="group relative aspect-square rounded-xl overflow-hidden bg-[#FCFAFF] border border-[#6554A4]/10"
                   >
                     <img
                       src={entry.image.secureUrl}
@@ -296,6 +415,27 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 ))}
               </div>
             )}
+          </section>
+
+          <section className="bg-[#FFF9EA]/85 border border-[#F3BB38]/40 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-base font-semibold text-[#29253A]">
+                Compliments Jar
+              </h2>
+              <Sparkles className="w-4 h-4 text-[#F3BB38]" />
+            </div>
+            <p className="text-xs text-[#817B90] leading-relaxed">
+              {jarCount > 0
+                ? `${jarCount} sweet ${jarCount === 1 ? 'note is' : 'notes are'} folded inside for you. Draw one whenever you need a smile.`
+                : 'Tuck small reminders of why you adore each other inside the jar for sunny & rainy days alike.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => onNavigate('jar')}
+              className="w-full py-2 px-3.5 rounded-xl bg-[#FFD45A] hover:bg-[#F3BB38] text-[#29253A] text-xs font-semibold transition-colors"
+            >
+              {jarCount > 0 ? 'Pick a little note' : 'Open the jar'}
+            </button>
           </section>
         </aside>
       </div>

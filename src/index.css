@@ -9,17 +9,27 @@
   --color-light-pink: #FFD6E7;
   --color-soft-blue: #D8E9FF;
   --color-deep-purple: #6554A4;
+
+  --color-sunflower: #FFD45A;
+  --color-sunflower-gold: #F3BB38;
+  --color-soft-cream: #FFF9EA;
+  --color-leaf-green: #91AA81;
+
   --color-ink: #29253A;
-  --color-ink-muted: #645E7B;
-  --color-canvas: #FAF9FE;
+  --color-ink-muted: #817B90;
+  --color-canvas: #FCFAFF;
 }
 
 @layer base {
   html {
     font-family: var(--font-sans);
     color: #29253A;
-    background-color: #FAF9FE;
+    background-color: #FCFAFF;
     scroll-behavior: smooth;
+  }
+
+  html[data-appearance="cream"] {
+    background-color: #FFFDF6;
   }
 
   h1, h2, h3, h4, .font-display {

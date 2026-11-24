@@ -1,5 +1,5 @@
 import mongoose, { Schema, type Model, type Document } from 'mongoose';
-import type { AvatarPreset, NoteTone, StickerId } from '../../types/index';
+import type { AvatarPreset, ComplimentCategory, NoteTone, StickerId } from '../../types/index';
 
 export interface IUserDoc extends Document<string> {
   _id: string;
@@ -9,6 +9,7 @@ export interface IUserDoc extends Document<string> {
   passwordHash: string;
   avatar: string;
   avatarPreset: AvatarPreset;
+  bio?: string;
   role: 'founder' | 'partner';
   createdAt: Date;
 }
@@ -42,10 +43,30 @@ export interface ISpaceDoc extends Document<string> {
   spaceName: string;
   tagline: string;
   welcomeMessage: string;
-  logoStyle: 'cat-duo' | 'heart' | 'moon';
+  logoStyle: 'cat-duo' | 'heart' | 'moon' | 'sunflower';
   inviteCodeHash: string | null;
   inviteExpiresAt: Date | null;
   updatedAt: Date;
+}
+
+export interface IComplimentDoc extends Document<string> {
+  _id: string;
+  spaceId: string;
+  authorId: string;
+  recipientId: string;
+  content: string;
+  category: ComplimentCategory;
+  createdAt: Date;
+  isDeleted: boolean;
+}
+
+export interface IComplimentDrawDoc extends Document<string> {
+  _id: string;
+  spaceId: string;
+  complimentId: string;
+  recipientId: string;
+  drawnAt: Date;
+  cycleNumber: number;
 }
 
 const UserSchema = new Schema<IUserDoc>(
@@ -61,6 +82,7 @@ const UserSchema = new Schema<IUserDoc>(
       enum: ['bat-cat', 'bow-cat', 'lavender', 'blush', 'sky'],
       default: 'bat-cat',
     },
+    bio: { type: String, default: '', maxlength: 160 },
     role: { type: String, enum: ['founder', 'partner'], required: true },
     createdAt: { type: Date, default: () => new Date() },
   },
@@ -112,13 +134,48 @@ const SpaceSchema = new Schema<ISpaceDoc>(
       type: String,
       default: 'Leave little notes, favorite moments, and snapshots for each other here.',
     },
-    logoStyle: { type: String, enum: ['cat-duo', 'heart', 'moon'], default: 'cat-duo' },
+    logoStyle: {
+      type: String,
+      enum: ['cat-duo', 'heart', 'moon', 'sunflower'],
+      default: 'cat-duo',
+    },
     inviteCodeHash: { type: String, default: null, index: true },
     inviteExpiresAt: { type: Date, default: null },
     updatedAt: { type: Date, default: () => new Date() },
   },
   { versionKey: false },
 );
+
+const ComplimentSchema = new Schema<IComplimentDoc>(
+  {
+    _id: { type: String, required: true },
+    spaceId: { type: String, required: true, index: true },
+    authorId: { type: String, required: true, ref: 'User' },
+    recipientId: { type: String, required: true },
+    content: { type: String, required: true, maxlength: 500 },
+    category: { type: String, default: 'Just because' },
+    createdAt: { type: Date, default: () => new Date() },
+    isDeleted: { type: Boolean, default: false },
+  },
+  { versionKey: false },
+);
+
+ComplimentSchema.index({ spaceId: 1, recipientId: 1, isDeleted: 1 });
+ComplimentSchema.index({ spaceId: 1, authorId: 1, createdAt: -1 });
+
+const ComplimentDrawSchema = new Schema<IComplimentDrawDoc>(
+  {
+    _id: { type: String, required: true },
+    spaceId: { type: String, required: true, index: true },
+    complimentId: { type: String, required: true, ref: 'Compliment' },
+    recipientId: { type: String, required: true, ref: 'User' },
+    drawnAt: { type: Date, default: () => new Date() },
+    cycleNumber: { type: Number, required: true, default: 1 },
+  },
+  { versionKey: false },
+);
+
+ComplimentDrawSchema.index({ spaceId: 1, recipientId: 1, drawnAt: -1 });
 
 export const UserModel: Model<IUserDoc> =
   (mongoose.models.User as Model<IUserDoc>) || mongoose.model<IUserDoc>('User', UserSchema);
@@ -128,6 +185,14 @@ export const NoteModel: Model<INoteDoc> =
 
 export const SpaceModel: Model<ISpaceDoc> =
   (mongoose.models.Space as Model<ISpaceDoc>) || mongoose.model<ISpaceDoc>('Space', SpaceSchema);
+
+export const ComplimentModel: Model<IComplimentDoc> =
+  (mongoose.models.Compliment as Model<IComplimentDoc>) ||
+  mongoose.model<IComplimentDoc>('Compliment', ComplimentSchema);
+
+export const ComplimentDrawModel: Model<IComplimentDrawDoc> =
+  (mongoose.models.ComplimentDraw as Model<IComplimentDrawDoc>) ||
+  mongoose.model<IComplimentDrawDoc>('ComplimentDraw', ComplimentDrawSchema);
 
 interface MongooseCache {
   conn: typeof mongoose | null;

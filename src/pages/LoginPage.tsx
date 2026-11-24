@@ -6,6 +6,7 @@ import type { AvatarPreset, PublicUser, SpaceStatus } from '../types/index';
 import { api } from '../utils/apiClient';
 import { CatDuoIllustration } from '../components/artwork/CatDuoIllustration';
 import { PartnerAvatar } from '../components/artwork/PartnerAvatar';
+import { SunflowerAccent } from '../components/artwork/SunflowerIllustration';
 import { useToast } from '../components/ui/ToastProvider';
 
 interface LoginPageProps {
@@ -90,7 +91,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF9FE] flex flex-col justify-center px-4 py-10 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#FFF9EA] via-[#FCFAFF] to-[#E9DFFF]/45 flex flex-col justify-center px-4 py-10 sm:px-6 lg:px-8">
       <main className="max-w-4xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         {/* Left: Brand & Cat Duo Illustration */}
         <motion.section
@@ -99,17 +100,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           transition={{ duration: 0.25 }}
           className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left"
         >
-          <CatDuoIllustration size="lg" className="mb-6 drop-shadow-xs" />
+          <div className="relative inline-flex items-end mb-6">
+            <CatDuoIllustration size="lg" className="drop-shadow-xs" />
+            <SunflowerAccent className="w-14 h-14 -ml-5 -mb-1 drop-shadow-xs" />
+          </div>
 
           <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-[#29253A] text-balance">
             Our Little Space
           </h1>
-          <p className="mt-3 text-base text-[#645E7B] leading-relaxed max-w-md">
+          <p className="mt-3 text-base text-[#817B90] leading-relaxed max-w-md">
             A quiet, private corner of the internet made exclusively for two people to leave
-            daily notes, photo memories, and small illustrated keepsakes.
+            daily notes, photo memories, compliments, and small illustrated keepsakes.
           </p>
 
-          <div className="mt-6 flex items-center gap-2 text-xs text-[#645E7B]">
+          <div className="mt-6 flex items-center gap-2 text-xs text-[#817B90]">
             <Lock className="w-3.5 h-3.5 text-[#6554A4]" />
             <span>
               {status.initialized

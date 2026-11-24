@@ -15,10 +15,22 @@ export const STICKER_IDS = [
   'pink-bow',
   'bat-cat',
   'cozy-moon',
+  'sunflower',
+  'tiny-stars',
+  'love-letter',
 ] as const;
 
 export const NOTE_TONES = ['white', 'lavender', 'pink', 'blue'] as const;
 export const AVATAR_PRESETS = ['bat-cat', 'bow-cat', 'lavender', 'blush', 'sky'] as const;
+
+export const COMPLIMENT_CATEGORIES = [
+  'Something I adore',
+  'Your personality',
+  'Your smile',
+  'Things you do',
+  'Little reminders',
+  'Just because',
+] as const;
 
 export const setupAccountSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(40, 'Name must be 40 characters or fewer'),
@@ -78,17 +90,27 @@ export const updateNoteSchema = z
     { message: 'Note cannot be completely empty.' },
   );
 
+export const createComplimentSchema = z.object({
+  content: z
+    .string()
+    .trim()
+    .min(2, 'Write a few sweet words first.')
+    .max(500, 'Keep jar notes sweet and concise (max 500 characters).'),
+  category: z.enum(COMPLIMENT_CATEGORIES).default('Just because'),
+});
+
 export const updateSpaceSettingsSchema = z.object({
   spaceName: z.string().trim().min(1, 'Space name is required').max(48),
   tagline: z.string().trim().max(100).default('Private Space for Two'),
   welcomeMessage: z.string().trim().min(1).max(240),
-  logoStyle: z.enum(['cat-duo', 'heart', 'moon']).default('cat-duo'),
+  logoStyle: z.enum(['cat-duo', 'heart', 'moon', 'sunflower']).default('cat-duo'),
 });
 
 export const updateProfileSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(40),
   avatarPreset: z.enum(AVATAR_PRESETS),
   avatar: z.string().trim().max(1000).optional(),
+  bio: z.string().trim().max(160, 'Bio must be 160 characters or fewer').optional(),
 });
 
 export const changePasswordSchema = z.object({

@@ -4,6 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import type {
   AvatarPreset,
+  ComplimentCategory,
+  ComplimentDrawEntry,
+  ComplimentDrawResult,
+  ComplimentItem,
+  ComplimentsOverview,
   NoteImage,
   NoteTone,
   PublicUser,
@@ -12,17 +17,24 @@ import type {
   SpaceStatus,
   StickerId,
 } from '../../types/index';
+import { selectNextCompliment } from '../../lib/complimentLogic';
 import {
+  ComplimentDrawModel,
+  ComplimentModel,
   connectMongoDB,
   DatabaseConnectionError,
   NoteModel,
   SpaceModel,
   UserModel,
+  type IComplimentDoc,
+  type IComplimentDrawDoc,
   type INoteDoc,
   type IUserDoc,
 } from '../models/mongooseModels';
 import { generateInviteCode, hashInviteCode, hashPassword, verifyPassword } from '../auth/crypto';
 import { deleteStoredImage, isCloudinaryConfigured } from '../media/imageService';
+
+const PENDING_PARTNER_ID = 'pending-partner';
 
 interface StoredUserRecord {
   id: string;
@@ -32,6 +44,7 @@ interface StoredUserRecord {
   passwordHash: string;
   avatar: string;
   avatarPreset: AvatarPreset;
+  bio?: string;
   role: 'founder' | 'partner';
   createdAt: string;
 }
@@ -55,15 +68,37 @@ interface StoredSpaceRecord {
   spaceName: string;
   tagline: string;
   welcomeMessage: string;
-  logoStyle: 'cat-duo' | 'heart' | 'moon';
+  logoStyle: 'cat-duo' | 'heart' | 'moon' | 'sunflower';
   inviteCodeHash: string | null;
   inviteExpiresAt: string | null;
   updatedAt: string;
 }
 
+interface StoredComplimentRecord {
+  id: string;
+  spaceId: string;
+  authorId: string;
+  recipientId: string;
+  content: string;
+  category: ComplimentCategory;
+  createdAt: string;
+  isDeleted: boolean;
+}
+
+interface StoredComplimentDrawRecord {
+  id: string;
+  spaceId: string;
+  complimentId: string;
+  recipientId: string;
+  drawnAt: string;
+  cycleNumber: number;
+}
+
 interface LocalDatabaseSnapshot {
   users: StoredUserRecord[];
   notes: StoredNoteRecord[];
+  compliments?: StoredComplimentRecord[];
+  complimentDraws?: StoredComplimentDrawRecord[];
   space?: StoredSpaceRecord;
   spaces?: Record<string, StoredSpaceRecord>;
 }
@@ -90,6 +125,8 @@ function defaultSpace(spaceName = 'Our Little Space'): StoredSpaceRecord {
 function normalizeLocalSnapshot(raw: LocalDatabaseSnapshot): {
   users: StoredUserRecord[];
   notes: StoredNoteRecord[];
+  compliments: StoredComplimentRecord[];
+  complimentDraws: StoredComplimentDrawRecord[];
   spaces: Record<string, StoredSpaceRecord>;
 } {
   const spaces: Record<string, StoredSpaceRecord> = { ...(raw.spaces || {}) };
@@ -107,12 +144,22 @@ function normalizeLocalSnapshot(raw: LocalDatabaseSnapshot): {
     ...n,
     spaceId: n.spaceId || DEFAULT_SPACE_ID,
   }));
-  return { users, notes, spaces };
+  const compliments = (raw.compliments || []).map((c) => ({
+    ...c,
+    spaceId: c.spaceId || DEFAULT_SPACE_ID,
+  }));
+  const complimentDraws = (raw.complimentDraws || []).map((d) => ({
+    ...d,
+    spaceId: d.spaceId || DEFAULT_SPACE_ID,
+  }));
+  return { users, notes, compliments, complimentDraws, spaces };
 }
 
 function readLocalDb(): {
   users: StoredUserRecord[];
   notes: StoredNoteRecord[];
+  compliments: StoredComplimentRecord[];
+  complimentDraws: StoredComplimentDrawRecord[];
   spaces: Record<string, StoredSpaceRecord>;
 } {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -120,6 +167,8 @@ function readLocalDb(): {
     const initial = {
       users: [],
       notes: [],
+      compliments: [],
+      complimentDraws: [],
       spaces: { [DEFAULT_SPACE_ID]: defaultSpace() },
     };
     writeLocalDb(initial);
@@ -132,6 +181,8 @@ function readLocalDb(): {
 function writeLocalDb(snapshot: {
   users: StoredUserRecord[];
   notes: StoredNoteRecord[];
+  compliments: StoredComplimentRecord[];
+  complimentDraws: StoredComplimentDrawRecord[];
   spaces: Record<string, StoredSpaceRecord>;
 }): void {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -148,6 +199,7 @@ function toPublicUser(u: StoredUserRecord): PublicUser {
     email: u.email,
     avatar: u.avatar,
     avatarPreset: u.avatarPreset,
+    bio: u.bio || '',
     role: u.role,
     createdAt: u.createdAt,
   };
@@ -162,6 +214,7 @@ function mongoUserToRecord(doc: IUserDoc): StoredUserRecord {
     passwordHash: doc.passwordHash,
     avatar: doc.avatar,
     avatarPreset: doc.avatarPreset,
+    bio: doc.bio || '',
     role: doc.role,
     createdAt: doc.createdAt.toISOString(),
   };
@@ -492,6 +545,10 @@ export async function redeemPartnerInvite(input: {
         role: 'partner',
         createdAt: now,
       });
+      await ComplimentModel.updateMany(
+        { spaceId: space._id, recipientId: PENDING_PARTNER_ID },
+        { $set: { recipientId: userId } },
+      );
       space.inviteCodeHash = null;
       space.inviteExpiresAt = null;
       space.updatedAt = now;
@@ -544,10 +601,16 @@ export async function redeemPartnerInvite(input: {
     passwordHash,
     avatar: '',
     avatarPreset: input.avatarPreset,
+    bio: '',
     role: 'partner',
     createdAt: now.toISOString(),
   };
   db.users.push(newUser);
+  db.compliments = db.compliments.map((c) =>
+    c.spaceId === matchedSpaceId && c.recipientId === PENDING_PARTNER_ID
+      ? { ...c, recipientId: userId }
+      : c,
+  );
   db.spaces[matchedSpaceId] = {
     ...db.spaces[matchedSpaceId],
     inviteCodeHash: null,
@@ -639,7 +702,7 @@ export async function listSpaceMembers(spaceId: string): Promise<PublicUser[]> {
 
 export async function updateUserProfile(
   userId: string,
-  input: { name: string; avatarPreset: AvatarPreset; avatar?: string },
+  input: { name: string; avatarPreset: AvatarPreset; avatar?: string; bio?: string },
 ): Promise<PublicUser> {
   const mongo = await useMongo();
   if (mongo) {
@@ -650,6 +713,7 @@ export async function updateUserProfile(
           name: input.name.trim(),
           avatarPreset: input.avatarPreset,
           ...(input.avatar !== undefined ? { avatar: input.avatar } : {}),
+          ...(input.bio !== undefined ? { bio: input.bio.trim() } : {}),
         },
       },
       { new: true },
@@ -666,6 +730,7 @@ export async function updateUserProfile(
     name: input.name.trim(),
     avatarPreset: input.avatarPreset,
     ...(input.avatar !== undefined ? { avatar: input.avatar } : {}),
+    ...(input.bio !== undefined ? { bio: input.bio.trim() } : {}),
   };
   writeLocalDb(db);
   return toPublicUser(db.users[idx]);
@@ -730,7 +795,7 @@ export async function updateSpaceSettings(
     spaceName: string;
     tagline: string;
     welcomeMessage: string;
-    logoStyle: 'cat-duo' | 'heart' | 'moon';
+    logoStyle: 'cat-duo' | 'heart' | 'moon' | 'sunflower';
   },
 ): Promise<SpaceSettings> {
   const now = new Date();
@@ -1021,4 +1086,294 @@ export async function softDeleteNoteByAuthor(
   writeLocalDb(db);
   const usersMap = new Map(db.users.map((u) => [u.id, u]));
   return hydrateNote(updated, usersMap);
+}
+
+function mongoComplimentToRecord(doc: IComplimentDoc): StoredComplimentRecord {
+  return {
+    id: doc._id,
+    spaceId: doc.spaceId || DEFAULT_SPACE_ID,
+    authorId: doc.authorId,
+    recipientId: doc.recipientId,
+    content: doc.content,
+    category: doc.category,
+    createdAt: doc.createdAt.toISOString(),
+    isDeleted: doc.isDeleted,
+  };
+}
+
+function mongoDrawToRecord(doc: IComplimentDrawDoc): StoredComplimentDrawRecord {
+  return {
+    id: doc._id,
+    spaceId: doc.spaceId || DEFAULT_SPACE_ID,
+    complimentId: doc.complimentId,
+    recipientId: doc.recipientId,
+    drawnAt: doc.drawnAt.toISOString(),
+    cycleNumber: doc.cycleNumber,
+  };
+}
+
+function hydrateCompliment(
+  c: StoredComplimentRecord,
+  usersMap: Map<string, StoredUserRecord>,
+): ComplimentItem {
+  const author = usersMap.get(c.authorId);
+  const recipient = usersMap.get(c.recipientId);
+  return {
+    id: c.id,
+    spaceId: c.spaceId,
+    authorId: c.authorId,
+    authorName: author?.name ?? 'Partner',
+    authorAvatar: author?.avatar ?? '',
+    authorAvatarPreset: author?.avatarPreset ?? 'bat-cat',
+    recipientId: c.recipientId,
+    recipientName: recipient?.name ?? 'Your partner',
+    content: c.content,
+    category: c.category,
+    createdAt: c.createdAt,
+  };
+}
+
+export async function getComplimentsOverview(
+  userId: string,
+  spaceId: string,
+): Promise<ComplimentsOverview> {
+  const mongo = await useMongo();
+  let users: StoredUserRecord[];
+  let compliments: StoredComplimentRecord[];
+  let draws: StoredComplimentDrawRecord[];
+
+  if (mongo) {
+    const [userDocs, complimentDocs, drawDocs] = await Promise.all([
+      UserModel.find(mongoSpaceFilter(spaceId)),
+      ComplimentModel.find({ spaceId, isDeleted: false }).sort({ createdAt: -1 }),
+      ComplimentDrawModel.find({ spaceId, recipientId: userId }).sort({ drawnAt: -1 }),
+    ]);
+    users = userDocs.map(mongoUserToRecord);
+    compliments = complimentDocs.map(mongoComplimentToRecord);
+    draws = drawDocs.map(mongoDrawToRecord);
+  } else {
+    const db = readLocalDb();
+    users = db.users.filter((u) => u.spaceId === spaceId);
+    compliments = db.compliments
+      .filter((c) => c.spaceId === spaceId && !c.isDeleted)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    draws = db.complimentDraws
+      .filter((d) => d.spaceId === spaceId && d.recipientId === userId)
+      .sort((a, b) => new Date(b.drawnAt).getTime() - new Date(a.drawnAt).getTime());
+  }
+
+  const usersMap = new Map(users.map((u) => [u.id, u]));
+  const complimentsMap = new Map(compliments.map((c) => [c.id, c]));
+  const partner = users.find((u) => u.id !== userId) ?? null;
+
+  const forMe = compliments.filter((c) => c.recipientId === userId && c.authorId !== userId);
+  const maxCycle = draws.reduce((m, d) => (d.cycleNumber > m ? d.cycleNumber : m), 1);
+  const drawnInCycle = new Set(
+    draws.filter((d) => d.cycleNumber === maxCycle).map((d) => d.complimentId),
+  );
+  const undrawnInCycle = forMe.filter((c) => !drawnInCycle.has(c.id)).length;
+  const remainingInCycle =
+    forMe.length === 0 ? 0 : undrawnInCycle > 0 ? undrawnInCycle : forMe.length;
+
+  const drawnHistory: ComplimentDrawEntry[] = [];
+  for (const d of draws) {
+    const comp = complimentsMap.get(d.complimentId);
+    if (!comp) continue;
+    drawnHistory.push({
+      drawId: d.id,
+      compliment: hydrateCompliment(comp, usersMap),
+      drawnAt: d.drawnAt,
+      cycleNumber: d.cycleNumber,
+    });
+  }
+
+  const writtenByMe = compliments
+    .filter((c) => c.authorId === userId)
+    .map((c) => hydrateCompliment(c, usersMap));
+
+  return {
+    totalInJarForMe: forMe.length,
+    remainingInCycle,
+    drawnHistory,
+    writtenByMe,
+    partnerJoined: Boolean(partner),
+    partnerName: partner?.name ?? null,
+  };
+}
+
+export async function createCompliment(
+  authorId: string,
+  spaceId: string,
+  input: { content: string; category: ComplimentCategory },
+): Promise<ComplimentItem> {
+  const complimentId = crypto.randomUUID();
+  const now = new Date();
+  const mongo = await useMongo();
+
+  if (mongo) {
+    const members = await UserModel.find(mongoSpaceFilter(spaceId));
+    const author = members.find((m) => m._id === authorId);
+    if (!author) throw new Error('UNAUTHORIZED');
+    const partner = members.find((m) => m._id !== authorId);
+    const recipientId = partner ? partner._id : PENDING_PARTNER_ID;
+
+    const created = await ComplimentModel.create({
+      _id: complimentId,
+      spaceId,
+      authorId,
+      recipientId,
+      content: input.content.trim(),
+      category: input.category,
+      createdAt: now,
+      isDeleted: false,
+    });
+    const usersMap = new Map(members.map((m) => [m._id, mongoUserToRecord(m)]));
+    return hydrateCompliment(mongoComplimentToRecord(created), usersMap);
+  }
+
+  const db = readLocalDb();
+  const members = db.users.filter((u) => u.spaceId === spaceId);
+  const author = members.find((u) => u.id === authorId);
+  if (!author) throw new Error('UNAUTHORIZED');
+  const partner = members.find((u) => u.id !== authorId);
+  const recipientId = partner ? partner.id : PENDING_PARTNER_ID;
+
+  const record: StoredComplimentRecord = {
+    id: complimentId,
+    spaceId,
+    authorId,
+    recipientId,
+    content: input.content.trim(),
+    category: input.category,
+    createdAt: now.toISOString(),
+    isDeleted: false,
+  };
+  db.compliments.unshift(record);
+  writeLocalDb(db);
+  const usersMap = new Map(members.map((u) => [u.id, u]));
+  return hydrateCompliment(record, usersMap);
+}
+
+export async function drawRandomCompliment(
+  recipientId: string,
+  spaceId: string,
+): Promise<ComplimentDrawResult> {
+  const drawId = crypto.randomUUID();
+  const now = new Date();
+  const mongo = await useMongo();
+
+  let users: StoredUserRecord[];
+  let forMe: StoredComplimentRecord[];
+  let draws: StoredComplimentDrawRecord[];
+
+  if (mongo) {
+    const [userDocs, complimentDocs, drawDocs] = await Promise.all([
+      UserModel.find(mongoSpaceFilter(spaceId)),
+      ComplimentModel.find({
+        spaceId,
+        recipientId,
+        authorId: { $ne: recipientId },
+        isDeleted: false,
+      }),
+      ComplimentDrawModel.find({ spaceId, recipientId }).sort({ drawnAt: -1 }),
+    ]);
+    users = userDocs.map(mongoUserToRecord);
+    forMe = complimentDocs.map(mongoComplimentToRecord);
+    draws = drawDocs.map(mongoDrawToRecord);
+  } else {
+    const db = readLocalDb();
+    users = db.users.filter((u) => u.spaceId === spaceId);
+    forMe = db.compliments.filter(
+      (c) =>
+        c.spaceId === spaceId &&
+        c.recipientId === recipientId &&
+        c.authorId !== recipientId &&
+        !c.isDeleted,
+    );
+    draws = db.complimentDraws
+      .filter((d) => d.spaceId === spaceId && d.recipientId === recipientId)
+      .sort((a, b) => new Date(b.drawnAt).getTime() - new Date(a.drawnAt).getTime());
+  }
+
+  const lastDrawnId = draws[0]?.complimentId ?? null;
+  const selection = selectNextCompliment(forMe, draws, Math.random, lastDrawnId);
+  if (!selection.selected) {
+    throw new Error('EMPTY_JAR');
+  }
+
+  if (mongo) {
+    await ComplimentDrawModel.create({
+      _id: drawId,
+      spaceId,
+      complimentId: selection.selected.id,
+      recipientId,
+      drawnAt: now,
+      cycleNumber: selection.nextCycleNumber,
+    });
+  } else {
+    const db = readLocalDb();
+    db.complimentDraws.unshift({
+      id: drawId,
+      spaceId,
+      complimentId: selection.selected.id,
+      recipientId,
+      drawnAt: now.toISOString(),
+      cycleNumber: selection.nextCycleNumber,
+    });
+    writeLocalDb(db);
+  }
+
+  const usersMap = new Map(users.map((u) => [u.id, u]));
+  return {
+    draw: {
+      drawId,
+      compliment: hydrateCompliment(selection.selected, usersMap),
+      drawnAt: now.toISOString(),
+      cycleNumber: selection.nextCycleNumber,
+    },
+    cycleReset: selection.cycleReset,
+    remainingInCycle: selection.remainingInCycleAfterDraw,
+    totalInJarForMe: forMe.length,
+  };
+}
+
+export async function softDeleteComplimentByAuthor(
+  complimentId: string,
+  requesterId: string,
+  spaceId: string,
+): Promise<{ id: string; recipientId: string; authorId: string }> {
+  const mongo = await useMongo();
+  if (mongo) {
+    const existing = await ComplimentModel.findById(complimentId);
+    if (!existing || existing.spaceId !== spaceId || existing.isDeleted) {
+      throw new Error('NOT_FOUND');
+    }
+    if (existing.authorId !== requesterId) {
+      throw new Error('FORBIDDEN');
+    }
+    existing.isDeleted = true;
+    await existing.save();
+    return {
+      id: existing._id,
+      recipientId: existing.recipientId,
+      authorId: existing.authorId,
+    };
+  }
+
+  const db = readLocalDb();
+  const idx = db.compliments.findIndex((c) => c.id === complimentId);
+  if (idx === -1 || db.compliments[idx].spaceId !== spaceId || db.compliments[idx].isDeleted) {
+    throw new Error('NOT_FOUND');
+  }
+  const existing = db.compliments[idx];
+  if (existing.authorId !== requesterId) {
+    throw new Error('FORBIDDEN');
+  }
+  db.compliments[idx] = { ...existing, isDeleted: true };
+  writeLocalDb(db);
+  return {
+    id: existing.id,
+    recipientId: existing.recipientId,
+    authorId: existing.authorId,
+  };
 }

@@ -14,7 +14,10 @@ export type StickerId =
   | 'pastel-flower'
   | 'pink-bow'
   | 'bat-cat'
-  | 'cozy-moon';
+  | 'cozy-moon'
+  | 'sunflower'
+  | 'tiny-stars'
+  | 'love-letter';
 
 export type AvatarPreset = 'bat-cat' | 'bow-cat' | 'lavender' | 'blush' | 'sky';
 
@@ -25,6 +28,7 @@ export interface PublicUser {
   email: string;
   avatar: string;
   avatarPreset: AvatarPreset;
+  bio?: string;
   role: 'founder' | 'partner';
   createdAt: string;
 }
@@ -55,11 +59,56 @@ export interface SharedNote {
   isDeleted: boolean;
 }
 
+export type ComplimentCategory =
+  | 'Something I adore'
+  | 'Your personality'
+  | 'Your smile'
+  | 'Things you do'
+  | 'Little reminders'
+  | 'Just because';
+
+export interface ComplimentItem {
+  id: string;
+  spaceId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+  authorAvatarPreset: AvatarPreset;
+  recipientId: string;
+  recipientName: string;
+  content: string;
+  category: ComplimentCategory;
+  createdAt: string;
+}
+
+export interface ComplimentDrawEntry {
+  drawId: string;
+  compliment: ComplimentItem;
+  drawnAt: string;
+  cycleNumber: number;
+}
+
+export interface ComplimentDrawResult {
+  draw: ComplimentDrawEntry;
+  cycleReset: boolean;
+  remainingInCycle: number;
+  totalInJarForMe: number;
+}
+
+export interface ComplimentsOverview {
+  totalInJarForMe: number;
+  remainingInCycle: number;
+  drawnHistory: ComplimentDrawEntry[];
+  writtenByMe: ComplimentItem[];
+  partnerJoined: boolean;
+  partnerName: string | null;
+}
+
 export interface SpaceSettings {
   spaceName: string;
   tagline: string;
   welcomeMessage: string;
-  logoStyle: 'cat-duo' | 'heart' | 'moon';
+  logoStyle: 'cat-duo' | 'heart' | 'moon' | 'sunflower';
   updatedAt: string;
 }
 
@@ -88,6 +137,8 @@ export type RealtimeEvent =
   | { type: 'note:created'; payload: SharedNote }
   | { type: 'note:updated'; payload: SharedNote }
   | { type: 'note:deleted'; payload: SharedNote }
+  | { type: 'compliment:created'; payload: { recipientId: string; authorId: string } }
+  | { type: 'compliment:deleted'; payload: { id: string; recipientId: string; authorId: string } }
   | { type: 'space:updated'; payload: SpaceSettings }
   | { type: 'user:updated'; payload: PublicUser }
   | { type: 'presence:update'; payload: { onlineUserIds: string[] } };

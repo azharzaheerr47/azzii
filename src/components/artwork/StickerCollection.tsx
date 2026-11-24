@@ -4,23 +4,27 @@ import type { StickerId } from '../../types/index';
 export interface StickerMeta {
   id: StickerId;
   label: string;
+  group: 'cats' | 'sunflower' | 'keepsakes';
 }
 
 export const STICKER_CATALOG: StickerMeta[] = [
-  { id: 'happy-cat', label: 'Happy Cat' },
-  { id: 'blushing-cat', label: 'Blushing Cat' },
-  { id: 'love-cats', label: 'Love Cats' },
-  { id: 'hugging-cats', label: 'Hugging Cats' },
-  { id: 'sleeping-cat', label: 'Sleeping Cat' },
-  { id: 'sad-cat', label: 'Sad Cat' },
-  { id: 'crying-cat', label: 'Crying Cat' },
-  { id: 'angry-cat', label: 'Angry Cat' },
-  { id: 'bat-cat', label: 'Bat Cat' },
-  { id: 'pink-bow', label: 'Pink Bow' },
-  { id: 'sweet-heart', label: 'Sweet Heart' },
-  { id: 'sparkle-star', label: 'Cute Star' },
-  { id: 'pastel-flower', label: 'Pastel Flower' },
-  { id: 'cozy-moon', label: 'Cozy Moon' },
+  { id: 'happy-cat', label: 'Happy Cat', group: 'cats' },
+  { id: 'blushing-cat', label: 'Blushing Cat', group: 'cats' },
+  { id: 'love-cats', label: 'Love Cats', group: 'cats' },
+  { id: 'hugging-cats', label: 'Hugging Cats', group: 'cats' },
+  { id: 'sleeping-cat', label: 'Sleeping Cat', group: 'cats' },
+  { id: 'sad-cat', label: 'Sad Cat', group: 'cats' },
+  { id: 'crying-cat', label: 'Crying Cat', group: 'cats' },
+  { id: 'angry-cat', label: 'Angry Cat', group: 'cats' },
+  { id: 'bat-cat', label: 'Bat Cat', group: 'cats' },
+  { id: 'sunflower', label: 'Sunflower', group: 'sunflower' },
+  { id: 'pastel-flower', label: 'Pastel Flower', group: 'sunflower' },
+  { id: 'tiny-stars', label: 'Tiny Stars', group: 'sunflower' },
+  { id: 'love-letter', label: 'Love Letter', group: 'keepsakes' },
+  { id: 'pink-bow', label: 'Pink Bow', group: 'keepsakes' },
+  { id: 'sweet-heart', label: 'Sweet Heart', group: 'keepsakes' },
+  { id: 'sparkle-star', label: 'Cute Star', group: 'keepsakes' },
+  { id: 'cozy-moon', label: 'Cozy Moon', group: 'keepsakes' },
 ];
 
 export function getStickerLabel(id: StickerId): string {
@@ -112,19 +116,16 @@ export const StickerArtwork: React.FC<{
         return (
           <svg viewBox="0 0 64 64" className="w-full h-full" fill="none" aria-hidden="true">
             <circle cx="32" cy="32" r="29" fill="#FFD6E7" />
-            {/* Left cat */}
             <path d="M13 28 L12 18 L21 24 Z" fill="#29253A" />
             <path d="M29 28 L30 18 L21 24 Z" fill="#29253A" />
             <circle cx="21" cy="34" r="10.5" fill="#29253A" />
             <circle cx="18.5" cy="33" r="1.6" fill="#FFD97D" />
             <circle cx="24" cy="33" r="1.6" fill="#FFD97D" />
-            {/* Right cat */}
             <path d="M35 28 L34 18 L43 24 Z" fill="#FFFFFF" stroke="#29253A" strokeWidth="2" />
             <path d="M51 28 L52 18 L43 24 Z" fill="#FFFFFF" stroke="#29253A" strokeWidth="2" />
             <circle cx="43" cy="34" r="10.5" fill="#FFFFFF" stroke="#29253A" strokeWidth="2" />
             <circle cx="40" cy="33" r="1.5" fill="#29253A" />
             <circle cx="45.5" cy="33" r="1.5" fill="#29253A" />
-            {/* Center heart */}
             <path d="M32 21 C32 18.8 29 17.5 27.5 19.6 C26 17.5 23 18.8 23 21 C23 24.3 27.5 26.8 27.5 26.8 C27.5 26.8 32 24.3 32 21 Z" transform="translate(4.5, -2)" fill="#FF5D9E" />
           </svg>
         );
@@ -149,6 +150,82 @@ export const StickerArtwork: React.FC<{
             <ellipse cx="38.5" cy="30" rx="2.6" ry="3" fill="#FFD97D" />
             <polygon points="30.5,36 33.5,36 32,38.5" fill="#FF8FB8" />
           </CatFaceBase>
+        );
+      case 'sunflower':
+        return (
+          <svg viewBox="0 0 64 64" className="w-full h-full" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="29" fill="#FFF9EA" />
+            <path d="M32 54 L32 34" stroke="#91AA81" strokeWidth="3.2" strokeLinecap="round" />
+            <path d="M32 47 C25 47 21 43 20 38 C25 38 30 41 32 47 Z" fill="#91AA81" />
+            <g transform="translate(32, 26)">
+              {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+                <ellipse
+                  key={deg}
+                  cx="0"
+                  cy="-11.5"
+                  rx="3.3"
+                  ry="6.6"
+                  transform={`rotate(${deg})`}
+                  fill={deg % 60 === 0 ? '#FFD45A' : '#F3BB38'}
+                  stroke="#29253A"
+                  strokeWidth="1.2"
+                />
+              ))}
+              <circle cx="0" cy="0" r="7.2" fill="#5B3E2B" stroke="#29253A" strokeWidth="1.8" />
+              <circle cx="-2.2" cy="-1.2" r="1" fill="#FFD45A" />
+              <circle cx="2.2" cy="-1.2" r="1" fill="#FFD45A" />
+              <path d="M-2 2 Q0 3.8 2 2" stroke="#FFD45A" strokeWidth="1.2" strokeLinecap="round" />
+            </g>
+          </svg>
+        );
+      case 'tiny-stars':
+        return (
+          <svg viewBox="0 0 64 64" className="w-full h-full" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="29" fill="#FFF9EA" />
+            <path
+              d="M27 16 L29.8 24.2 L38 27 L29.8 29.8 L27 38 L24.2 29.8 L16 27 L24.2 24.2 Z"
+              fill="#FFD45A"
+              stroke="#29253A"
+              strokeWidth="2"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M44 31 L45.7 36.3 L51 38 L45.7 39.7 L44 45 L42.3 39.7 L37 38 L42.3 36.3 Z"
+              fill="#BFA7F2"
+              stroke="#29253A"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+            />
+            <circle cx="22" cy="44" r="3" fill="#FFD6E7" stroke="#29253A" strokeWidth="1.6" />
+            <circle cx="43" cy="20" r="2.2" fill="#F3BB38" />
+          </svg>
+        );
+      case 'love-letter':
+        return (
+          <svg viewBox="0 0 64 64" className="w-full h-full" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="29" fill="#D8E9FF" />
+            <rect
+              x="14"
+              y="20"
+              width="36"
+              height="25"
+              rx="4"
+              fill="#FFFFFF"
+              stroke="#29253A"
+              strokeWidth="2.2"
+            />
+            <path
+              d="M14 22 L32 35 L50 22"
+              stroke="#29253A"
+              strokeWidth="2.1"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M32 31.5 C32 29.8 29.5 28.8 28.3 30.5 C27.1 28.8 24.6 29.8 24.6 31.5 C24.6 34.1 28.3 36.2 28.3 36.2 C28.3 36.2 32 34.1 32 31.5 Z"
+              transform="translate(3.7, 3.5)"
+              fill="#FF7EB3"
+            />
+          </svg>
         );
       case 'pink-bow':
         return (

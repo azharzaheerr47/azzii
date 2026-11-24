@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Send, Smile, X } from 'lucide-react';
 import type { NoteImage, NoteTone, SharedNote, StickerId } from '../../types/index';
 import { api } from '../../utils/apiClient';
@@ -7,6 +7,8 @@ import { useToast } from '../ui/ToastProvider';
 
 interface NoteComposerProps {
   onCreated: (note: SharedNote) => void;
+  initialSticker?: StickerId | null;
+  onConsumeInitialSticker?: () => void;
 }
 
 interface PendingPreview {
@@ -32,17 +34,28 @@ const SURFACE_BG: Record<NoteTone, string> = {
   blue: 'bg-[#D8E9FF]/45',
 };
 
-export const NoteComposer: React.FC<NoteComposerProps> = ({ onCreated }) => {
+export const NoteComposer: React.FC<NoteComposerProps> = ({
+  onCreated,
+  initialSticker = null,
+  onConsumeInitialSticker,
+}) => {
   const { showToast } = useToast();
   const [content, setContent] = useState('');
   const [tone, setTone] = useState<NoteTone>('white');
-  const [sticker, setSticker] = useState<StickerId | null>(null);
+  const [sticker, setSticker] = useState<StickerId | null>(initialSticker);
   const [showStickers, setShowStickers] = useState(false);
   const [previews, setPreviews] = useState<PendingPreview[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (initialSticker) {
+      setSticker(initialSticker);
+      onConsumeInitialSticker?.();
+    }
+  }, [initialSticker, onConsumeInitialSticker]);
 
   const handleSelectFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);

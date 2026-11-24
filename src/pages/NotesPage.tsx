@@ -6,6 +6,7 @@ import type {
   NotesLayoutMode,
   PublicUser,
   SharedNote,
+  StickerId,
 } from '../types/index';
 import { CatDuoIllustration } from '../components/artwork/CatDuoIllustration';
 import { NoteCard } from '../components/notes/NoteCard';
@@ -18,6 +19,8 @@ interface NotesPageProps {
   notes: SharedNote[];
   loadingNotes: boolean;
   onlineUserIds: string[];
+  initialSticker?: StickerId | null;
+  onConsumeInitialSticker?: () => void;
   onNoteCreated: (note: SharedNote) => void;
   onNoteUpdated: (note: SharedNote) => void;
   onNoteDeleted: (note: SharedNote) => void;
@@ -30,6 +33,8 @@ export const NotesPage: React.FC<NotesPageProps> = ({
   notes,
   loadingNotes,
   onlineUserIds,
+  initialSticker = null,
+  onConsumeInitialSticker,
   onNoteCreated,
   onNoteUpdated,
   onNoteDeleted,
@@ -100,7 +105,11 @@ export const NotesPage: React.FC<NotesPageProps> = ({
         </div>
       </div>
 
-      <NoteComposer onCreated={onNoteCreated} />
+      <NoteComposer
+        onCreated={onNoteCreated}
+        initialSticker={initialSticker}
+        onConsumeInitialSticker={onConsumeInitialSticker}
+      />
 
       {/* Search & Filter Bar */}
       <section
