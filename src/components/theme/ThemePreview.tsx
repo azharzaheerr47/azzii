@@ -126,18 +126,12 @@ export const ThemePreview: React.FC<ThemePreviewProps> = ({
             borderColor: palette.border,
           }}
         >
-          <div className="flex items-center gap-2 min-w-0">
-            <span
-              className="w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: palette.accent }}
-            />
-            <span
-              className="font-display text-xs font-semibold truncate"
-              style={{ color: palette.text }}
-            >
-              {spaceName}
-            </span>
-          </div>
+          <span
+            className="font-display text-xs font-semibold truncate"
+            style={{ color: palette.text }}
+          >
+            {spaceName}
+          </span>
           <span className="text-[11px] font-medium shrink-0" style={{ color: palette.muted }}>
             {palette.badgeLabel}
           </span>

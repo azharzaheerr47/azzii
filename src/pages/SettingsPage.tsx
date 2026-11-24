@@ -155,10 +155,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     }
   };
 
+  const sectionLinks = [
+    { id: 'settings-appearance', label: 'Appearance & Themes' },
+    { id: 'settings-space', label: 'Shared Space' },
+    { id: 'settings-profile', label: 'Your Profile' },
+    { id: 'settings-password', label: 'Password' },
+    { id: 'settings-access', label: 'Two-Person Access' },
+  ];
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="space-y-7">
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+        <h1 className="font-display text-2xl sm:text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
           Space Settings
         </h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -166,386 +179,430 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </p>
       </div>
 
-      {/* Personalized Appearance & Themes */}
-      <AppearanceSettings spaceName={space.spaceName} userName={user.name} />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
+        {/* Sticky Section Navigation (Desktop) */}
+        <aside
+          aria-label="Settings sections"
+          className="hidden lg:block lg:col-span-3 lg:sticky lg:top-24 space-y-4"
+        >
+          <nav className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-2 shadow-[var(--shadow-card)] space-y-0.5">
+            {sectionLinks.map((sec) => (
+              <button
+                key={sec.id}
+                type="button"
+                onClick={() => scrollToSection(sec.id)}
+                className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+              >
+                {sec.label}
+              </button>
+            ))}
+          </nav>
 
-      {/* Space Customization */}
-      <section className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 transition-colors">
-        <h2 className="font-display text-lg font-semibold text-[var(--text-primary)]">
-          Customize Shared Space
-        </h2>
-        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-          Changes sync immediately for both of you.
-        </p>
-
-        <form onSubmit={handleSaveSpace} className="mt-5 space-y-4">
-          <div>
-            <label
-              htmlFor="settings-space-name"
-              className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
-            >
-              Space name
-            </label>
-            <input
-              id="settings-space-name"
-              type="text"
-              required
-              maxLength={48}
-              value={spaceName}
-              onChange={(e) => setSpaceName(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="settings-welcome-message"
-              className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
-            >
-              Dashboard welcome message
-            </label>
-            <textarea
-              id="settings-welcome-message"
-              rows={2}
-              required
-              maxLength={240}
-              value={welcomeMessage}
-              onChange={(e) => setWelcomeMessage(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="settings-tagline"
-              className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
-            >
-              Subtitle
-            </label>
-            <input
-              id="settings-tagline"
-              type="text"
-              maxLength={100}
-              value={tagline}
-              onChange={(e) => setTagline(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
-            />
-          </div>
-
-          <div>
-            <span className="block text-xs font-medium text-[var(--text-primary)] mb-2">
-              Logo mark
-            </span>
-            <div className="flex flex-wrap gap-2.5">
-              {LOGO_CHOICES.map((choice) => (
-                <button
-                  key={choice.id}
-                  type="button"
-                  onClick={() => setLogoStyle(choice.id)}
-                  aria-pressed={logoStyle === choice.id}
-                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
-                    logoStyle === choice.id
-                      ? 'bg-[var(--accent-soft-strong)] border-[var(--accent-primary)] text-[var(--text-primary)]'
-                      : 'bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
-                  }`}
-                >
-                  <SpaceBrandMark style={choice.id} className="w-6 h-6" />
-                  <span className="whitespace-nowrap">{choice.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={savingSpace}
-              className="px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors disabled:opacity-60"
-            >
-              {savingSpace ? 'Saving...' : 'Save space settings'}
-            </button>
-          </div>
-        </form>
-      </section>
-
-      {/* Personal Profile */}
-      <section className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 transition-colors">
-        <h2 className="font-display text-lg font-semibold text-[var(--text-primary)]">
-          Your Profile
-        </h2>
-        <form onSubmit={handleSaveProfile} className="mt-5 space-y-4">
-          <div>
-            <label
-              htmlFor="settings-display-name"
-              className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
-            >
-              Display name
-            </label>
-            <input
-              id="settings-display-name"
-              type="text"
-              required
-              maxLength={40}
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="settings-bio"
-              className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
-            >
-              Short bio or mood <span className="font-normal text-[var(--text-muted)]">(optional)</span>
-            </label>
-            <input
-              id="settings-bio"
-              type="text"
-              maxLength={160}
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="e.g., Currently craving iced matcha & late night walks"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
-            />
-          </div>
-
-          <div>
-            <span className="block text-xs font-medium text-[var(--text-primary)] mb-2">
-              Avatar style
-            </span>
-            <div className="flex flex-wrap gap-2.5">
-              {AVATAR_CHOICES.map((choice) => (
-                <button
-                  key={choice.id}
-                  type="button"
-                  onClick={() => setAvatarPreset(choice.id)}
-                  aria-pressed={avatarPreset === choice.id}
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
-                    avatarPreset === choice.id
-                      ? 'bg-[var(--accent-soft-strong)] border-[var(--accent-primary)] text-[var(--text-primary)]'
-                      : 'bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
-                  }`}
-                >
-                  <PartnerAvatar name={displayName || choice.label} preset={choice.id} size="xs" />
-                  <span className="whitespace-nowrap">{choice.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={savingProfile}
-              className="px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors disabled:opacity-60"
-            >
-              {savingProfile ? 'Updating...' : 'Save profile'}
-            </button>
-          </div>
-        </form>
-      </section>
-
-      {/* Change Password */}
-      <section className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 transition-colors">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-display text-lg font-semibold text-[var(--text-primary)]">
-              Password
-            </h2>
-            <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-              Update the password for your account ({user.email}).
+          <div className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-4 shadow-[var(--shadow-card)] space-y-1.5">
+            <p className="text-xs font-medium text-[var(--text-primary)] truncate">
+              {space.spaceName}
+            </p>
+            <p className="text-[11px] text-[var(--text-muted)] tabular-nums">
+              {status.userCount} of {status.maxUsers} seats claimed
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowPasswords((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap"
+        </aside>
+
+        <div className="lg:col-span-9 space-y-6">
+          {/* Personalized Appearance & Themes */}
+          <AppearanceSettings spaceName={space.spaceName} userName={user.name} />
+
+          {/* Space Customization */}
+          <section
+            id="settings-space"
+            className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 shadow-[var(--shadow-card)] transition-colors scroll-mt-24"
           >
-            {showPasswords ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            <span>{showPasswords ? 'Hide passwords' : 'Show passwords'}</span>
-          </button>
-        </div>
-
-        <form onSubmit={handleChangePassword} className="mt-5 space-y-4">
-          <div>
-            <label
-              htmlFor="settings-current-password"
-              className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
-            >
-              Current password
-            </label>
-            <input
-              id="settings-current-password"
-              type={showPasswords ? 'text' : 'password'}
-              required
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="settings-new-password"
-                className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
-              >
-                New password
-              </label>
-              <input
-                id="settings-new-password"
-                type={showPasswords ? 'text' : 'password'}
-                required
-                minLength={8}
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Minimum 8 characters"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="settings-confirm-password"
-                className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
-              >
-                Confirm new password
-              </label>
-              <input
-                id="settings-confirm-password"
-                type={showPasswords ? 'text' : 'password'}
-                required
-                minLength={8}
-                autoComplete="new-password"
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-                placeholder="Repeat new password"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
-              />
-            </div>
-          </div>
-
-          {passwordError && (
-            <p
-              role="alert"
-              className="text-xs text-[var(--danger-text)] bg-[var(--danger-bg)] border border-[var(--danger-border)] rounded-xl px-3.5 py-2.5"
-            >
-              {passwordError}
-            </p>
-          )}
-
-          <div className="pt-1">
-            <button
-              type="submit"
-              disabled={savingPassword}
-              className="px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors disabled:opacity-60"
-            >
-              {savingPassword ? 'Updating...' : 'Update password'}
-            </button>
-          </div>
-        </form>
-      </section>
-
-      {/* Two-Person Privacy & Members */}
-      <section className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 space-y-4 transition-colors">
-        <div className="flex items-start justify-between gap-4">
-          <div>
             <h2 className="font-display text-lg font-semibold text-[var(--text-primary)]">
-              Private Two-Person Access
+              Customize Shared Space
             </h2>
             <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-              {status.userCount} of {status.maxUsers} authorized accounts registered.
-              {status.userCount === 2 && ' New registrations are permanently closed.'}
+              Changes sync immediately for both of you.
             </p>
-          </div>
-          <ShieldCheck className="w-5 h-5 text-[var(--accent-primary)] shrink-0" />
-        </div>
 
-        <div className="divide-y divide-[var(--border-subtle)] border-t border-[var(--border-subtle)]">
-          {members.map((m) => (
-            <div key={m.id} className="py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <PartnerAvatar
-                  name={m.name}
-                  preset={m.avatarPreset}
-                  avatarUrl={m.avatar}
-                  size="sm"
+            <form onSubmit={handleSaveSpace} className="mt-5 space-y-4">
+              <div>
+                <label
+                  htmlFor="settings-space-name"
+                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                >
+                  Space name
+                </label>
+                <input
+                  id="settings-space-name"
+                  type="text"
+                  required
+                  maxLength={48}
+                  value={spaceName}
+                  onChange={(e) => setSpaceName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
                 />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">
-                    {m.name} {m.id === user.id ? '(You)' : ''}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)] truncate">{m.email}</p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="settings-welcome-message"
+                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                >
+                  Dashboard welcome message
+                </label>
+                <textarea
+                  id="settings-welcome-message"
+                  rows={2}
+                  required
+                  maxLength={240}
+                  value={welcomeMessage}
+                  onChange={(e) => setWelcomeMessage(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="settings-tagline"
+                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                >
+                  Subtitle
+                </label>
+                <input
+                  id="settings-tagline"
+                  type="text"
+                  maxLength={100}
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
+                />
+              </div>
+
+              <div>
+                <span className="block text-xs font-medium text-[var(--text-primary)] mb-2">
+                  Logo mark
+                </span>
+                <div className="flex flex-wrap gap-2.5">
+                  {LOGO_CHOICES.map((choice) => (
+                    <button
+                      key={choice.id}
+                      type="button"
+                      onClick={() => setLogoStyle(choice.id)}
+                      aria-pressed={logoStyle === choice.id}
+                      className={`min-h-[38px] inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
+                        logoStyle === choice.id
+                          ? 'bg-[var(--accent-soft-strong)] border-[var(--accent-primary)] text-[var(--text-primary)]'
+                          : 'bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
+                      }`}
+                    >
+                      <SpaceBrandMark style={choice.id} className="w-6 h-6" />
+                      <span className="whitespace-nowrap">{choice.label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-              <span className="text-xs text-[var(--text-muted)] capitalize shrink-0">{m.role}</span>
-            </div>
-          ))}
-        </div>
 
-        {status.userCount < status.maxUsers && (
-          <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-3">
-            <p className="text-xs text-[var(--text-muted)]">
-              Generate a one-time 7-day invite link or code for your partner to claim seat 2.
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              {inviteCode && (
-                <>
-                  <code className="px-3 py-1.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-subtle)] text-xs font-semibold tracking-wider text-[var(--text-primary)] tabular-nums">
-                    {inviteCode}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => copyInvite('link')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--accent-on-primary)] text-xs font-medium hover:bg-[var(--accent-primary-hover)] whitespace-nowrap"
-                  >
-                    {copiedType === 'link' ? (
-                      <Check className="w-3.5 h-3.5" />
-                    ) : (
-                      <Link2 className="w-3.5 h-3.5" />
-                    )}
-                    <span>{copiedType === 'link' ? 'Link copied' : 'Copy invite link'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => copyInvite('code')}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] whitespace-nowrap"
-                  >
-                    {copiedType === 'code' ? (
-                      <Check className="w-3.5 h-3.5" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                    <span>{copiedType === 'code' ? 'Code copied' : 'Copy code'}</span>
-                  </button>
-                </>
-              )}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={savingSpace}
+                  className="min-h-[40px] px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors disabled:opacity-60"
+                >
+                  {savingSpace ? 'Saving...' : 'Save space settings'}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Personal Profile */}
+          <section
+            id="settings-profile"
+            className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 shadow-[var(--shadow-card)] transition-colors scroll-mt-24"
+          >
+            <h2 className="font-display text-lg font-semibold text-[var(--text-primary)]">
+              Your Profile
+            </h2>
+            <form onSubmit={handleSaveProfile} className="mt-5 space-y-4">
+              <div>
+                <label
+                  htmlFor="settings-display-name"
+                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                >
+                  Display name
+                </label>
+                <input
+                  id="settings-display-name"
+                  type="text"
+                  required
+                  maxLength={40}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="settings-bio"
+                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                >
+                  Short bio or mood <span className="font-normal text-[var(--text-muted)]">(optional)</span>
+                </label>
+                <input
+                  id="settings-bio"
+                  type="text"
+                  maxLength={160}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="e.g., Currently craving iced matcha & late night walks"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
+                />
+              </div>
+
+              <div>
+                <span className="block text-xs font-medium text-[var(--text-primary)] mb-2">
+                  Avatar style
+                </span>
+                <div className="flex flex-wrap gap-2.5">
+                  {AVATAR_CHOICES.map((choice) => (
+                    <button
+                      key={choice.id}
+                      type="button"
+                      onClick={() => setAvatarPreset(choice.id)}
+                      aria-pressed={avatarPreset === choice.id}
+                      className={`min-h-[38px] inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
+                        avatarPreset === choice.id
+                          ? 'bg-[var(--accent-soft-strong)] border-[var(--accent-primary)] text-[var(--text-primary)]'
+                          : 'bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
+                      }`}
+                    >
+                      <PartnerAvatar name={displayName || choice.label} preset={choice.id} size="xs" />
+                      <span className="whitespace-nowrap">{choice.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="min-h-[40px] px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors disabled:opacity-60"
+                >
+                  {savingProfile ? 'Updating...' : 'Save profile'}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Change Password */}
+          <section
+            id="settings-password"
+            className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 shadow-[var(--shadow-card)] transition-colors scroll-mt-24"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="font-display text-lg font-semibold text-[var(--text-primary)]">
+                  Password
+                </h2>
+                <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                  Update the password for your account ({user.email}).
+                </p>
+              </div>
               <button
                 type="button"
-                disabled={rotatingInvite}
-                onClick={handleRotateInvite}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[var(--border-strong)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs font-medium hover:bg-[var(--bg-hover)] disabled:opacity-60 whitespace-nowrap"
+                onClick={() => setShowPasswords((prev) => !prev)}
+                className="min-h-[34px] inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>{inviteCode ? 'New link' : 'Generate invite'}</span>
+                {showPasswords ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span>{showPasswords ? 'Hide passwords' : 'Show passwords'}</span>
               </button>
             </div>
-          </div>
-        )}
-      </section>
 
-      {/* Sign out */}
-      <div className="flex items-center justify-end pt-2">
-        <button
-          type="button"
-          onClick={onLogout}
-          className="px-4 py-2 rounded-xl border border-[var(--border-strong)] bg-[var(--bg-card)] text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-        >
-          Sign out
-        </button>
+            <form onSubmit={handleChangePassword} className="mt-5 space-y-4">
+              <div>
+                <label
+                  htmlFor="settings-current-password"
+                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                >
+                  Current password
+                </label>
+                <input
+                  id="settings-current-password"
+                  type={showPasswords ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="settings-new-password"
+                    className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                  >
+                    New password
+                  </label>
+                  <input
+                    id="settings-new-password"
+                    type={showPasswords ? 'text' : 'password'}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Minimum 8 characters"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="settings-confirm-password"
+                    className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                  >
+                    Confirm new password
+                  </label>
+                  <input
+                    id="settings-confirm-password"
+                    type={showPasswords ? 'text' : 'password'}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="Repeat new password"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
+                  />
+                </div>
+              </div>
+
+              {passwordError && (
+                <p
+                  role="alert"
+                  className="text-xs text-[var(--danger-text)] bg-[var(--danger-bg)] border border-[var(--danger-border)] rounded-xl px-3.5 py-2.5"
+                >
+                  {passwordError}
+                </p>
+              )}
+
+              <div className="pt-1">
+                <button
+                  type="submit"
+                  disabled={savingPassword}
+                  className="min-h-[40px] px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors disabled:opacity-60"
+                >
+                  {savingPassword ? 'Updating...' : 'Update password'}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Two-Person Privacy & Members */}
+          <section
+            id="settings-access"
+            className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 shadow-[var(--shadow-card)] space-y-4 transition-colors scroll-mt-24"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="font-display text-lg font-semibold text-[var(--text-primary)]">
+                  Private Two-Person Access
+                </h2>
+                <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                  {status.userCount} of {status.maxUsers} authorized accounts registered.
+                  {status.userCount === 2 && ' New registrations are permanently closed.'}
+                </p>
+              </div>
+              <ShieldCheck className="w-5 h-5 text-[var(--accent-primary)] shrink-0" />
+            </div>
+
+            <div className="divide-y divide-[var(--border-subtle)] border-t border-[var(--border-subtle)]">
+              {members.map((m) => (
+                <div key={m.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <PartnerAvatar
+                      name={m.name}
+                      preset={m.avatarPreset}
+                      avatarUrl={m.avatar}
+                      size="sm"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+                        {m.name} {m.id === user.id ? '(You)' : ''}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)] truncate">{m.email}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-[var(--text-muted)] capitalize shrink-0">{m.role}</span>
+                </div>
+              ))}
+            </div>
+
+            {status.userCount < status.maxUsers && (
+              <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-col gap-3">
+                <p className="text-xs text-[var(--text-muted)]">
+                  Generate a one-time 7-day invite link or code for your partner to claim seat 2.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {inviteCode && (
+                    <>
+                      <code className="px-3 py-1.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-subtle)] text-xs font-semibold tracking-wider text-[var(--text-primary)] tabular-nums">
+                        {inviteCode}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => copyInvite('link')}
+                        className="min-h-[36px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--accent-on-primary)] text-xs font-medium hover:bg-[var(--accent-primary-hover)] whitespace-nowrap"
+                      >
+                        {copiedType === 'link' ? (
+                          <Check className="w-3.5 h-3.5" />
+                        ) : (
+                          <Link2 className="w-3.5 h-3.5" />
+                        )}
+                        <span>{copiedType === 'link' ? 'Link copied' : 'Copy invite link'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyInvite('code')}
+                        className="min-h-[36px] inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] whitespace-nowrap"
+                      >
+                        {copiedType === 'code' ? (
+                          <Check className="w-3.5 h-3.5" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                        <span>{copiedType === 'code' ? 'Code copied' : 'Copy code'}</span>
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    disabled={rotatingInvite}
+                    onClick={handleRotateInvite}
+                    className="min-h-[36px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[var(--border-strong)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs font-medium hover:bg-[var(--bg-hover)] disabled:opacity-60 whitespace-nowrap"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>{inviteCode ? 'New link' : 'Generate invite'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Sign out */}
+          <div className="flex items-center justify-end pt-1">
+            <button
+              type="button"
+              onClick={onLogout}
+              className="min-h-[40px] px-4 py-2 rounded-xl border border-[var(--border-strong)] bg-[var(--bg-card)] text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

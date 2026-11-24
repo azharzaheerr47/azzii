@@ -136,13 +136,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     <>
       <motion.article
         layout="position"
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.18 }}
+        transition={{ duration: 0.16 }}
         style={toneStyle}
-        className={`relative ${
+        className={`group/card relative ${
           editing ? 'z-20' : ''
-        } border rounded-2xl p-4 sm:p-5 backdrop-blur-md transition-[shadow,background-color,border-color] duration-200 hover:shadow-sm`}
+        } border rounded-2xl p-4 sm:p-5 backdrop-blur-md transition-[box-shadow,background-color,border-color] duration-150 hover:shadow-[0_6px_20px_-10px_rgba(33,29,48,0.12)]`}
       >
         {/* Header Metadata (Zero-Pill clean unboxed typography) */}
         <div className="flex items-start justify-between gap-3">
@@ -164,7 +164,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 </span>
                 <time
                   dateTime={note.createdAt}
-                  className="text-xs text-[var(--text-secondary)] tabular-nums"
+                  className="text-xs text-[var(--text-muted)] tabular-nums"
                 >
                   {createdLabel}
                 </time>
@@ -186,22 +186,22 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           </div>
 
           {canMutate && !editing && (
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-0.5 shrink-0 opacity-100 md:opacity-65 md:group-hover/card:opacity-100 focus-within:opacity-100 transition-opacity">
               <button
                 type="button"
                 onClick={startEditing}
                 aria-label={`Edit note by ${note.authorName} from ${createdLabel}`}
-                className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
               >
-                <Pencil className="w-4 h-4" />
+                <Pencil className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmDeleteOpen(true)}
                 aria-label={`Delete note by ${note.authorName} from ${createdLabel}`}
-                className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--danger-text)] hover:bg-[var(--danger-bg)] transition-colors"
+                className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--danger-text)] hover:bg-[var(--danger-bg)] transition-colors"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           )}

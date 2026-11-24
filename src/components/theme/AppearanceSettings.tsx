@@ -108,8 +108,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
 
   return (
     <section
+      id="settings-appearance"
       aria-labelledby="appearance-heading"
-      className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 space-y-6 transition-colors"
+      className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 shadow-[var(--shadow-card)] space-y-6 transition-colors scroll-mt-24"
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -128,7 +129,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           type="button"
           disabled={isDefaultState || savingAppearance}
           onClick={resetToDefault}
-          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-45 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          className="self-start sm:self-auto min-h-[36px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-45 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>Reset to default</span>
@@ -146,18 +147,18 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
 
       {/* Signature Romantic Mode Toggle Card */}
       <div
-        className={`rounded-2xl border p-4 sm:p-5 flex items-center justify-between gap-4 transition-all duration-200 ${
+        className={`rounded-2xl border p-4 sm:p-5 flex items-center justify-between gap-4 transition-colors duration-200 ${
           appearance.romanticMode
-            ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/35'
-            : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+            ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)]'
+            : 'bg-[var(--bg-subtle)]/70 border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
         }`}
       >
         <div className="flex items-start gap-3.5 min-w-0">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors"
             style={{
-              backgroundColor: appearance.romanticMode ? '#D94F85' : '#FFD5E4',
-              color: appearance.romanticMode ? '#FFFFFF' : '#D94F85',
+              backgroundColor: appearance.romanticMode ? '#C93B72' : '#FFE4EE',
+              color: appearance.romanticMode ? '#FFFFFF' : '#C93B72',
             }}
           >
             <Heart className="w-5 h-5 fill-current" />
@@ -192,7 +193,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           onClick={() => toggleRomanticMode(!appearance.romanticMode)}
           className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors duration-200 ${
             appearance.romanticMode
-              ? 'bg-[#D94F85] border-[#D94F85]'
+              ? 'bg-[#C93B72] border-[#C93B72]'
               : 'bg-[var(--bg-subtle)] border-[var(--border-strong)]'
           }`}
         >
@@ -217,22 +218,22 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           aria-checked={isSystemActive}
           disabled={savingAppearance}
           onClick={() => selectThemeMode('system')}
-          className={`group text-left rounded-2xl border p-4 transition-all duration-150 hover:-translate-y-0.5 ${
+          className={`group text-left rounded-2xl border p-4 transition-colors duration-150 ${
             isSystemActive
-              ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/40'
-              : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+              ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)]'
+              : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)]'
           }`}
         >
           <div className="flex items-start justify-between gap-3">
             {/* Split Dark/Light visual preview */}
             <div className="w-14 h-10 rounded-xl overflow-hidden border border-[var(--border-strong)] grid grid-cols-2 shrink-0">
               <div className="bg-[#FFFFFF] p-1.5 flex flex-col justify-between">
-                <span className="w-3 h-1 rounded-full bg-[#9B82D8]" />
+                <span className="w-3 h-1 rounded-full bg-[#6855A3]" />
                 <span className="w-full h-2 rounded-xs bg-[#F3EFFB]" />
               </div>
-              <div className="bg-[#17151F] p-1.5 flex flex-col justify-between">
+              <div className="bg-[#15131C] p-1.5 flex flex-col justify-between">
                 <span className="w-3 h-1 rounded-full bg-[#BFA7F2]" />
-                <span className="w-full h-2 rounded-xs bg-[#282333]" />
+                <span className="w-full h-2 rounded-xs bg-[#262231]" />
               </div>
             </div>
 
@@ -261,19 +262,19 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           aria-checked={isDarkActive}
           disabled={savingAppearance}
           onClick={() => selectThemeMode('dark')}
-          className={`group text-left rounded-2xl border p-4 transition-all duration-150 hover:-translate-y-0.5 ${
+          className={`group text-left rounded-2xl border p-4 transition-colors duration-150 ${
             isDarkActive
-              ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/40'
-              : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+              ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)]'
+              : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)]'
           }`}
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="w-14 h-10 rounded-xl overflow-hidden border border-[#BFA7F2]/35 bg-[#17151F] p-1.5 flex flex-col justify-between shrink-0">
+            <div className="w-14 h-10 rounded-xl overflow-hidden border border-[#BFA7F2]/35 bg-[#15131C] p-1.5 flex flex-col justify-between shrink-0">
               <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#BFA7F2]" />
-                <span className="w-5 h-1 rounded-full bg-[#A8A0B7]/60" />
+                <span className="w-3 h-1 rounded-full bg-[#BFA7F2]" />
+                <span className="w-4 h-1 rounded-full bg-[#ABA3BA]/50" />
               </div>
-              <div className="h-3 rounded-xs bg-[#282333] border border-[#BFA7F2]/20" />
+              <div className="h-3 rounded-xs bg-[#262231] border border-[#BFA7F2]/20" />
             </div>
 
             {isDarkActive && (
@@ -301,19 +302,19 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           aria-checked={isLightActive}
           disabled={savingAppearance}
           onClick={() => selectThemeMode('light')}
-          className={`group text-left rounded-2xl border p-4 transition-all duration-150 hover:-translate-y-0.5 ${
+          className={`group text-left rounded-2xl border p-4 transition-colors duration-150 ${
             isLightActive
-              ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/40'
-              : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+              ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)]'
+              : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)]'
           }`}
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="w-14 h-10 rounded-xl overflow-hidden border border-[#9B82D8]/30 bg-[#FFFFFF] p-1.5 flex flex-col justify-between shrink-0">
+            <div className="w-14 h-10 rounded-xl overflow-hidden border border-[#6855A3]/25 bg-[#FFFFFF] p-1.5 flex flex-col justify-between shrink-0">
               <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#9B82D8]" />
-                <span className="w-5 h-1 rounded-full bg-[#817B90]/45" />
+                <span className="w-3 h-1 rounded-full bg-[#6855A3]" />
+                <span className="w-4 h-1 rounded-full bg-[#7A748A]/40" />
               </div>
-              <div className="h-3 rounded-xs bg-[#FCFAFF] border border-[#9B82D8]/25" />
+              <div className="h-3 rounded-xs bg-[#FAF9FC] border border-[#6855A3]/20" />
             </div>
 
             {isLightActive && (
@@ -336,10 +337,10 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
 
         {/* 4. Create Your Own Theme (Custom Photo) */}
         <div
-          className={`group rounded-2xl border p-4 transition-all duration-150 hover:-translate-y-0.5 flex flex-col justify-between ${
+          className={`group rounded-2xl border p-4 transition-colors duration-150 flex flex-col justify-between ${
             isCustomActive
-              ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]/40'
-              : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+              ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)]'
+              : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)]'
           }`}
         >
           <button

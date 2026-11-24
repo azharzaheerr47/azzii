@@ -134,10 +134,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const jarCount = complimentsSummary?.totalInJarForMe ?? 0;
 
   return (
-    <div className="space-y-8">
-      {/* Theme-Responsive Hero Section */}
+    <div className="space-y-7">
+      {/* Theme-Responsive Editorial Hero Section */}
       <section
-        className="relative overflow-hidden border border-[var(--accent-border)] rounded-3xl p-6 sm:p-8 shadow-xs backdrop-blur-md transition-colors duration-300"
+        className="relative overflow-hidden border border-[var(--border-subtle)] rounded-2xl p-6 sm:p-8 backdrop-blur-md transition-colors duration-200"
         style={{
           backgroundImage:
             'linear-gradient(135deg, var(--bg-hero-from), var(--bg-hero-via), var(--bg-hero-to))',
@@ -154,55 +154,53 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <time className="tabular-nums">{formatHeaderDate()}</time>
             </div>
 
-            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] text-balance">
+            <h1 className="font-display text-2xl sm:text-[32px] font-bold leading-tight tracking-tight text-[var(--text-primary)] text-balance">
               {getGreeting()}, {user.name}
             </h1>
-            <p className="text-sm sm:text-[15px] text-[var(--text-secondary)] leading-relaxed">
+            <p className="text-sm sm:text-[15px] text-[var(--text-secondary)] leading-relaxed max-w-xl">
               {space.welcomeMessage}
             </p>
-            <p className="text-xs italic text-[var(--text-muted)] pt-1">
+            <p className="text-[13px] italic text-[var(--text-muted)] pt-0.5">
               “{dailyQuote}”
             </p>
           </div>
 
-          <div className="flex items-center gap-4 self-start md:self-auto shrink-0">
-            <div className="flex items-center gap-3 bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl px-4 py-3 shadow-2xs">
-              <div className="flex items-center -space-x-2">
-                {members.map((m) => (
-                  <PartnerAvatar
-                    key={m.id}
-                    name={m.name}
-                    preset={m.avatarPreset}
-                    avatarUrl={m.avatar}
-                    size="sm"
-                    isOnline={onlineUserIds.includes(m.id)}
-                  />
-                ))}
-              </div>
-              <div className="text-xs leading-snug">
-                <p className="font-semibold text-[var(--text-primary)]">
-                  {partner ? `${user.name} & ${partner.name}` : `${user.name} · Waiting for partner`}
-                </p>
-                <p className="text-[var(--text-muted)]">
-                  {partner
-                    ? partner.bio
-                      ? partner.bio
-                      : onlineUserIds.includes(partner.id)
-                        ? `${partner.name} is here now`
-                        : 'Shared space synced'
-                    : '1 of 2 seats active'}
-                </p>
-              </div>
+          <div className="flex items-center gap-4 pt-4 md:pt-0 md:pl-6 border-t md:border-t-0 md:border-l border-[var(--border-subtle)] shrink-0">
+            <div className="flex items-center -space-x-2">
+              {members.map((m) => (
+                <PartnerAvatar
+                  key={m.id}
+                  name={m.name}
+                  preset={m.avatarPreset}
+                  avatarUrl={m.avatar}
+                  size="sm"
+                  isOnline={onlineUserIds.includes(m.id)}
+                />
+              ))}
             </div>
-            <SunflowerAccent className="hidden sm:block w-14 h-14 shrink-0" />
+            <div className="text-xs leading-snug">
+              <p className="font-semibold text-[var(--text-primary)]">
+                {partner ? `${user.name} & ${partner.name}` : `${user.name} · Waiting for partner`}
+              </p>
+              <p className="text-[var(--text-muted)] mt-0.5">
+                {partner
+                  ? partner.bio
+                    ? partner.bio
+                    : onlineUserIds.includes(partner.id)
+                      ? `${partner.name} is here now`
+                      : 'Shared space synced'
+                  : '1 of 2 seats active'}
+              </p>
+            </div>
+            <SunflowerAccent className="hidden sm:block w-11 h-11 ml-1 shrink-0" />
           </div>
         </div>
       </section>
 
       {/* Partner 2 Invite Banner (shown only while slot 2 is open) */}
       {status.userCount < status.maxUsers && (
-        <section className="bg-[var(--accent-soft)] backdrop-blur-md border border-[var(--accent-border)] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+        <section className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--accent-border)] rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="min-w-0">
             <h2 className="font-display text-sm font-semibold text-[var(--text-primary)]">
               Invite your partner to claim the second account
             </h2>
@@ -214,13 +212,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {inviteCode ? (
               <>
-                <code className="px-3 py-1.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs font-semibold tracking-wider text-[var(--text-primary)] tabular-nums">
+                <code className="px-3 py-1.5 rounded-lg bg-[var(--bg-input)] border border-[var(--border-subtle)] text-xs font-semibold tracking-wider text-[var(--text-primary)] tabular-nums">
                   {inviteCode}
                 </code>
                 <button
                   type="button"
                   onClick={() => handleCopyInvite('link')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-medium whitespace-nowrap"
+                  className="min-h-[36px] inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-medium whitespace-nowrap transition-colors"
                 >
                   {copiedType === 'link' ? (
                     <Check className="w-3.5 h-3.5" />
@@ -232,7 +230,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <button
                   type="button"
                   onClick={() => handleCopyInvite('code')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-medium hover:bg-[var(--bg-hover)] whitespace-nowrap"
+                  className="min-h-[36px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-input)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-medium hover:bg-[var(--bg-hover)] whitespace-nowrap transition-colors"
                 >
                   {copiedType === 'code' ? (
                     <Check className="w-3.5 h-3.5" />
@@ -247,7 +245,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 type="button"
                 disabled={generatingInvite}
                 onClick={handleGenerateInvite}
-                className="px-3.5 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-medium disabled:opacity-60 whitespace-nowrap"
+                className="min-h-[36px] px-3.5 py-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-medium disabled:opacity-60 whitespace-nowrap transition-colors"
               >
                 {generatingInvite ? 'Generating...' : 'Create invite link'}
               </button>
@@ -256,75 +254,75 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </section>
       )}
 
-      {/* Quick Access Grid */}
-      <section aria-label="Quick access" className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      {/* Compact Quick Access Strip */}
+      <section aria-label="Quick access" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <button
           type="button"
           onClick={() => onNavigate('notes')}
-          className="group text-left bg-[var(--bg-card)] backdrop-blur-md hover:bg-[var(--tile-notes-hover)] border border-[var(--border-subtle)] rounded-2xl p-4 sm:p-5 transition-colors"
+          className="group text-left bg-[var(--bg-card)] backdrop-blur-md hover:border-[var(--border-strong)] border border-[var(--border-subtle)] rounded-xl p-4 transition-colors flex items-start gap-3"
         >
-          <div className="w-9 h-9 rounded-xl bg-[var(--tile-notes-bg)] flex items-center justify-center mb-3">
-            <BookOpen className="w-4 h-4 text-[var(--accent-primary)]" />
+          <BookOpen className="w-4 h-4 text-[var(--accent-primary)] mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
+              Our Notes
+            </h2>
+            <p className="mt-0.5 text-xs text-[var(--text-muted)] tabular-nums truncate">
+              {activeNotes.length} {activeNotes.length === 1 ? 'note' : 'notes'} shared
+            </p>
           </div>
-          <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
-            Our Notes
-          </h2>
-          <p className="mt-0.5 text-xs text-[var(--text-muted)] tabular-nums">
-            {activeNotes.length} {activeNotes.length === 1 ? 'note' : 'notes'} shared
-          </p>
         </button>
 
         <button
           type="button"
           onClick={() => onNavigate('memories')}
-          className="group text-left bg-[var(--bg-card)] backdrop-blur-md hover:bg-[var(--tile-memories-hover)] border border-[var(--border-subtle)] rounded-2xl p-4 sm:p-5 transition-colors"
+          className="group text-left bg-[var(--bg-card)] backdrop-blur-md hover:border-[var(--border-strong)] border border-[var(--border-subtle)] rounded-xl p-4 transition-colors flex items-start gap-3"
         >
-          <div className="w-9 h-9 rounded-xl bg-[var(--tile-memories-bg)] flex items-center justify-center mb-3">
-            <Images className="w-4 h-4 text-[var(--text-primary)]" />
+          <Images className="w-4 h-4 text-[var(--accent-primary)] mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
+              Our Memories
+            </h2>
+            <p className="mt-0.5 text-xs text-[var(--text-muted)] tabular-nums truncate">
+              {galleryItems.length} {galleryItems.length === 1 ? 'photo' : 'photos'} kept
+            </p>
           </div>
-          <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
-            Our Memories
-          </h2>
-          <p className="mt-0.5 text-xs text-[var(--text-muted)] tabular-nums">
-            {galleryItems.length} {galleryItems.length === 1 ? 'photo' : 'photos'} kept
-          </p>
         </button>
 
         <button
           type="button"
           onClick={() => onNavigate('jar')}
-          className="group text-left bg-[var(--jar-card-bg)] backdrop-blur-md hover:opacity-95 border border-[var(--jar-card-border)] rounded-2xl p-4 sm:p-5 transition-all"
+          className="group text-left bg-[var(--jar-card-bg)] backdrop-blur-md hover:border-[var(--accent-primary)]/40 border border-[var(--jar-card-border)] rounded-xl p-4 transition-colors flex items-start gap-3"
         >
-          <div className="w-9 h-9 rounded-xl bg-[var(--tile-jar-bg)] flex items-center justify-center mb-3">
-            <Sparkles className="w-4 h-4 text-[var(--text-primary)]" />
+          <Sparkles className="w-4 h-4 text-[var(--jar-icon)] mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
+              Compliments Jar
+            </h2>
+            <p className="mt-0.5 text-xs text-[var(--text-muted)] tabular-nums truncate">
+              {jarCount > 0 ? `${jarCount} waiting for you` : 'Pick or leave a note'}
+            </p>
           </div>
-          <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
-            Compliments Jar
-          </h2>
-          <p className="mt-0.5 text-xs text-[var(--text-muted)] tabular-nums">
-            {jarCount > 0 ? `${jarCount} waiting for you` : 'Pick or leave a love note'}
-          </p>
         </button>
 
         <button
           type="button"
           onClick={() => onNavigate('stickers')}
-          className="group text-left bg-[var(--bg-card)] backdrop-blur-md hover:bg-[var(--tile-stickers-hover)] border border-[var(--border-subtle)] rounded-2xl p-4 sm:p-5 transition-colors"
+          className="group text-left bg-[var(--bg-card)] backdrop-blur-md hover:border-[var(--border-strong)] border border-[var(--border-subtle)] rounded-xl p-4 transition-colors flex items-start gap-3"
         >
-          <div className="w-9 h-9 rounded-xl bg-[var(--tile-stickers-bg)] flex items-center justify-center mb-3">
-            <Sticker className="w-4 h-4 text-[var(--text-primary)]" />
+          <Sticker className="w-4 h-4 text-[var(--accent-primary)] mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
+              Stickers
+            </h2>
+            <p className="mt-0.5 text-xs text-[var(--text-muted)] truncate">
+              17 keepsakes
+            </p>
           </div>
-          <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
-            Stickers
-          </h2>
-          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-            17 custom keepsakes
-          </p>
         </button>
       </section>
 
       {/* Main Content Grid: Composer + Feed on Left, Memories & Jar Snapshot on Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
         <div className="lg:col-span-8 space-y-6">
           <NoteComposer onCreated={onNoteCreated} />
 
@@ -351,18 +349,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             {loadingNotes ? (
               <NoteSkeletonList count={3} />
             ) : recentNotes.length === 0 ? (
-              <div className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-8 text-center flex flex-col items-center">
-                <CatDuoIllustration size="md" className="mb-4" />
+              <div className="border border-dashed border-[var(--border-strong)] rounded-2xl px-6 py-10 text-center flex flex-col items-center">
+                <CatDuoIllustration size="md" className="mb-3.5" />
                 <h3 className="font-display text-base font-semibold text-[var(--text-primary)]">
                   Your shared journal is ready
                 </h3>
-                <p className="mt-1 text-sm text-[var(--text-muted)] max-w-sm">
+                <p className="mt-1 text-sm text-[var(--text-muted)] max-w-sm leading-relaxed">
                   Write your first note above, attach a favorite snapshot, or leave a sweet
                   sunflower sticker for your partner to find.
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3.5">
                 {recentNotes.map((note) => (
                   <NoteCard
                     key={note.id}
@@ -380,10 +378,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         {/* Sidebar: Memories Snapshot + Compliments Jar Invitation */}
-        <aside className="lg:col-span-4 space-y-6">
+        <aside className="lg:col-span-4 space-y-5">
           <section className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
+              <h2 className="font-display text-[15px] font-semibold text-[var(--text-primary)]">
                 Recent Memories
               </h2>
               <button
@@ -396,7 +394,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
 
             {recentGallery.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)] leading-relaxed py-4">
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed py-2">
                 Photos uploaded in Memories or attached to notes will gather here as your shared
                 keepsake wall.
               </p>
@@ -425,12 +423,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
           <section className="bg-[var(--jar-card-bg)] backdrop-blur-md border border-[var(--jar-card-border)] rounded-2xl p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
+              <h2 className="font-display text-[15px] font-semibold text-[var(--text-primary)]">
                 Compliments Jar
               </h2>
               <Sparkles className="w-4 h-4 text-[var(--jar-icon)]" />
             </div>
-            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
               {jarCount > 0
                 ? `${jarCount} sweet ${jarCount === 1 ? 'note is' : 'notes are'} folded inside for you. Draw one whenever you need a smile.`
                 : 'Tuck small reminders of why you adore each other inside the jar for sunny & rainy days alike.'}
@@ -438,7 +436,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('jar')}
-              className="w-full py-2 px-3.5 rounded-xl bg-[var(--jar-btn-bg)] hover:bg-[var(--jar-btn-hover)] text-[var(--jar-btn-text)] text-xs font-semibold transition-colors"
+              className="w-full min-h-[38px] py-2 px-3.5 rounded-xl bg-[var(--jar-btn-bg)] hover:bg-[var(--jar-btn-hover)] text-[var(--jar-btn-text)] text-xs font-semibold transition-colors"
             >
               {jarCount > 0 ? 'Pick a little note' : 'Open the jar'}
             </button>

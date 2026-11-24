@@ -136,10 +136,10 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+          <h1 className="font-display text-2xl sm:text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
             Compliments Jar
           </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
             Folded little reminders and sweet notes tucked away for bright days and quiet nights.
           </p>
         </div>
@@ -147,7 +147,7 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
         <button
           type="button"
           onClick={() => setAddModalOpen(true)}
-          className="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors self-start sm:self-auto whitespace-nowrap shrink-0"
+          className="min-h-[42px] inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-semibold transition-colors self-start sm:self-auto whitespace-nowrap shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Add a little love</span>
@@ -156,7 +156,7 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
 
       {/* Main Interactive Jar Card */}
       <section
-        className="border border-[var(--jar-card-border)] rounded-3xl p-6 sm:p-8 shadow-xs backdrop-blur-md transition-colors duration-300"
+        className="border border-[var(--border-subtle)] rounded-2xl p-6 sm:p-8 shadow-[var(--shadow-card)] backdrop-blur-md transition-colors duration-300"
         style={{
           backgroundImage:
             'linear-gradient(135deg, var(--bg-hero-from), var(--bg-hero-via), var(--bg-hero-to))',
@@ -337,9 +337,9 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
             role="tab"
             aria-selected={activeTab === 'received'}
             onClick={() => setActiveTab('received')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+            className={`min-h-[34px] px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
               activeTab === 'received'
-                ? 'bg-[var(--jar-card-bg)] text-[var(--text-primary)] ring-1 ring-[var(--jar-card-border)]'
+                ? 'bg-[var(--accent-soft-strong)] text-[var(--text-primary)]'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
             }`}
           >
@@ -350,7 +350,7 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
             role="tab"
             aria-selected={activeTab === 'written'}
             onClick={() => setActiveTab('written')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+            className={`min-h-[34px] px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
               activeTab === 'written'
                 ? 'bg-[var(--accent-soft-strong)] text-[var(--text-primary)]'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -362,7 +362,7 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
 
         {activeTab === 'received' ? (
           (overview?.drawnHistory.length ?? 0) === 0 ? (
-            <div className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-8 text-center text-sm text-[var(--text-muted)]">
+            <div className="border border-dashed border-[var(--border-strong)] bg-[var(--bg-card)]/60 rounded-2xl p-8 text-center text-sm text-[var(--text-muted)]">
               Notes you draw from the jar will stay gathered here so you can revisit them anytime.
             </div>
           ) : (
@@ -370,7 +370,7 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
               {overview?.drawnHistory.map((entry) => (
                 <article
                   key={entry.drawId}
-                  className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-5 flex flex-col justify-between gap-3"
+                  className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-5 shadow-[var(--shadow-card)] flex flex-col justify-between gap-3"
                 >
                   <p className="text-[15px] leading-relaxed text-[var(--text-primary)]">
                     “{entry.compliment.content}”
@@ -389,7 +389,7 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
             </div>
           )
         ) : (overview?.writtenByMe.length ?? 0) === 0 ? (
-          <div className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-8 text-center space-y-3">
+          <div className="border border-dashed border-[var(--border-strong)] bg-[var(--bg-card)]/60 rounded-2xl p-8 text-center space-y-3">
             <p className="text-sm text-[var(--text-muted)]">
               You haven&apos;t tucked any notes into{' '}
               {partner ? `${partner.name}'s` : "your partner's"} jar yet.
@@ -397,7 +397,7 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
             <button
               type="button"
               onClick={() => setAddModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-medium"
+              className="min-h-[38px] px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-semibold transition-colors"
             >
               Write your first compliment
             </button>
@@ -407,7 +407,7 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
             {overview?.writtenByMe.map((item) => (
               <article
                 key={item.id}
-                className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-5 flex items-start justify-between gap-3"
+                className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-5 shadow-[var(--shadow-card)] flex items-start justify-between gap-3"
               >
                 <div className="space-y-2 min-w-0">
                   <p className="text-[15px] leading-relaxed text-[var(--text-primary)] break-words">

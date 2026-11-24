@@ -48,22 +48,22 @@ export const AppShell: React.FC<AppShellProps> = ({
       className={`min-h-screen ${rootBg} text-[var(--text-primary)] flex flex-col pb-20 md:pb-0 transition-colors duration-300`}
     >
       {/* Strict 3-Zone Top Bar Contract */}
-      <header className="sticky top-0 z-30 bg-[var(--bg-nav)] backdrop-blur-md border-b border-[var(--border-subtle)] transition-colors duration-300">
+      <header className="sticky top-0 z-30 bg-[var(--bg-nav)] backdrop-blur-md border-b border-[var(--border-subtle)] transition-colors duration-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4 sm:gap-8">
           {/* Zone 1: Brand mark + single-line Space Name */}
           <button
             type="button"
             onClick={() => onNavigate('dashboard')}
-            className="flex items-center gap-2.5 text-left whitespace-nowrap shrink-0 group"
+            className="flex items-center gap-2.5 text-left whitespace-nowrap shrink-0 group rounded-lg focus-visible:ring-offset-2"
           >
             <SpaceBrandMark style={space.logoStyle} className="w-8 h-8 shrink-0" />
-            <span className="font-display text-base sm:text-lg font-bold tracking-tight text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors truncate max-w-[145px] sm:max-w-[210px]">
+            <span className="font-display text-[17px] font-bold tracking-tight text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors truncate max-w-[155px] sm:max-w-[220px]">
               {space.spaceName}
             </span>
           </button>
 
           {/* Zone 2: Clean single-line text nav links (Desktop/Tablet) */}
-          <nav className="hidden md:flex items-center gap-5 lg:gap-6" aria-label="Main navigation">
+          <nav className="hidden md:flex items-center gap-6 lg:gap-7" aria-label="Main navigation">
             {PRIMARY_NAV_ITEMS.map((item) => {
               const active = currentRoute === item.id;
               return (
@@ -72,10 +72,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                   type="button"
                   onClick={() => onNavigate(item.id)}
                   aria-current={active ? 'page' : undefined}
-                  className={`py-1.5 text-sm font-medium transition-colors whitespace-nowrap shrink-0 border-b-2 ${
+                  className={`relative py-2 text-[14px] transition-colors whitespace-nowrap shrink-0 border-b-2 ${
                     active
-                      ? 'text-[var(--nav-active-text)] border-[var(--nav-active-border)]'
-                      : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)]'
+                      ? 'font-semibold text-[var(--nav-active-text)] border-[var(--nav-active-border)]'
+                      : 'font-medium text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {item.label}
@@ -85,8 +85,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           </nav>
 
           {/* Zone 3: Partner Presence + Settings + Sign Out */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden lg:flex items-center -space-x-2 mr-1" aria-label="Space members">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="hidden lg:flex items-center -space-x-2 mr-1.5" aria-label="Space members">
               {members.map((member) => (
                 <PartnerAvatar
                   key={member.id}
@@ -103,10 +103,10 @@ export const AppShell: React.FC<AppShellProps> = ({
               onClick={() => onNavigate('settings')}
               aria-label="Space settings"
               aria-current={currentRoute === 'settings' ? 'page' : undefined}
-              className={`min-h-[40px] min-w-[40px] inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+              className={`min-h-[38px] min-w-[38px] inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors whitespace-nowrap shrink-0 ${
                 currentRoute === 'settings'
-                  ? 'bg-[var(--accent-soft-strong)] text-[var(--nav-active-text)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                  ? 'bg-[var(--accent-soft)] text-[var(--nav-active-text)] font-semibold'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
               }`}
             >
               <Settings className="w-4 h-4" />
@@ -116,7 +116,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               type="button"
               onClick={onLogout}
               aria-label={`Sign out ${user.name}`}
-              className="min-h-[40px] inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap shrink-0"
+              className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap shrink-0"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Sign out</span>
@@ -126,7 +126,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-7 sm:py-9">
         {children}
       </main>
 
@@ -140,7 +140,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
       {/* Mobile Bottom Navigation (<= 15% viewport height, >= 44px touch targets) */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[var(--bg-nav)] backdrop-blur-md border-t border-[var(--border-subtle)] px-1.5 py-1.5 transition-colors duration-300"
+        className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[var(--bg-nav)] backdrop-blur-md border-t border-[var(--border-subtle)] px-2 py-1.5 transition-colors duration-200"
         aria-label="Mobile navigation"
       >
         <div className="grid grid-cols-5 gap-1 max-w-md mx-auto">
@@ -153,10 +153,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                 type="button"
                 onClick={() => onNavigate(item.id)}
                 aria-current={active ? 'page' : undefined}
-                className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-medium transition-colors ${
+                className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-lg text-[11px] transition-colors ${
                   active
-                    ? 'text-[var(--nav-active-text)] bg-[var(--accent-soft)] ring-1 ring-[var(--accent-border)]'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    ? 'font-semibold text-[var(--nav-active-text)] bg-[var(--accent-soft)]'
+                    : 'font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 <Icon className="w-4 h-4" />

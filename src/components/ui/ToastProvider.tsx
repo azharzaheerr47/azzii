@@ -66,7 +66,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.98 }}
                 transition={{ duration: 0.18 }}
-                className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-md text-sm ${styleClass}`}
+                className={`pointer-events-auto flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border shadow-[0_10px_24px_-8px_rgba(24,20,36,0.18)] text-[13px] ${styleClass}`}
                 role="status"
               >
                 <Icon
@@ -76,12 +76,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                       : 'text-[var(--accent-primary)]'
                   }`}
                 />
-                <span className="flex-1 leading-snug">{toast.message}</span>
+                <span className="flex-1 leading-snug font-medium">{toast.message}</span>
                 <button
                   type="button"
                   onClick={() => dismiss(toast.id)}
                   aria-label="Dismiss notification"
-                  className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+                  className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

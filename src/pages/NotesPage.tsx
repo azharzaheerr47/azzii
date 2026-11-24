@@ -61,7 +61,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          <h1 className="font-display text-2xl sm:text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
             Shared Notes
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)] tabular-nums">
@@ -80,7 +80,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({
             type="button"
             onClick={() => setLayout('feed')}
             aria-pressed={layout === 'feed'}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+            className={`min-h-[34px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
               layout === 'feed'
                 ? 'bg-[var(--accent-soft-strong)] text-[var(--text-primary)]'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -93,7 +93,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({
             type="button"
             onClick={() => setLayout('grid')}
             aria-pressed={layout === 'grid'}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+            className={`min-h-[34px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
               layout === 'grid'
                 ? 'bg-[var(--accent-soft-strong)] text-[var(--text-primary)]'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -114,7 +114,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({
       {/* Search & Filter Bar */}
       <section
         aria-label="Search and filter notes"
-        className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-3.5 sm:p-4 flex flex-col lg:flex-row items-stretch lg:items-center gap-3"
+        className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-3 sm:p-3.5 shadow-[var(--shadow-card)] flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5"
       >
         <div className="relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -127,11 +127,11 @@ export const NotesPage: React.FC<NotesPageProps> = ({
             value={filters.search}
             onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
             placeholder="Search notes by keyword, sticker, or author..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
+            className="w-full min-h-[38px] pl-9 pr-4 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/75 focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <div>
             <label htmlFor="notes-author-filter" className="sr-only">
               Filter by creator
@@ -140,7 +140,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({
               id="notes-author-filter"
               value={filters.authorId}
               onChange={(e) => setFilters((f) => ({ ...f, authorId: e.target.value }))}
-              className="px-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
+              className="min-h-[38px] px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
             >
               <option value="all">Both partners</option>
               {members.map((m) => (
@@ -160,7 +160,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({
               type="date"
               value={filters.dateFilter}
               onChange={(e) => setFilters((f) => ({ ...f, dateFilter: e.target.value }))}
-              className="px-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] tabular-nums focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
+              className="min-h-[38px] px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] tabular-nums focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
             />
           </div>
 
@@ -177,7 +177,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({
                   sort: e.target.value === 'oldest' ? 'oldest' : 'newest',
                 }))
               }
-              className="px-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
+              className="min-h-[38px] px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20"
             >
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
@@ -188,7 +188,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium text-[var(--accent-primary)] hover:bg-[var(--bg-hover)] whitespace-nowrap"
+              className="min-h-[38px] inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-[var(--accent-primary)] hover:bg-[var(--bg-hover)] whitespace-nowrap transition-colors"
             >
               <X className="w-3.5 h-3.5" />
               <span>Clear</span>
@@ -201,12 +201,12 @@ export const NotesPage: React.FC<NotesPageProps> = ({
       {loadingNotes ? (
         <NoteSkeletonList count={4} />
       ) : filteredNotes.length === 0 ? (
-        <div className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-10 text-center flex flex-col items-center">
+        <div className="border border-dashed border-[var(--border-strong)] bg-[var(--bg-card)]/60 rounded-2xl p-10 text-center flex flex-col items-center">
           <CatDuoIllustration size="md" className="mb-4" />
           <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
             {hasActiveFilters ? 'No matching notes found' : 'No notes yet'}
           </h2>
-          <p className="mt-1 text-sm text-[var(--text-muted)] max-w-sm">
+          <p className="mt-1.5 text-sm text-[var(--text-muted)] max-w-sm">
             {hasActiveFilters
               ? 'Try adjusting your search keywords, date, or partner filter.'
               : 'Write your first shared note above to start filling your timeline.'}
@@ -215,7 +215,7 @@ export const NotesPage: React.FC<NotesPageProps> = ({
             <button
               type="button"
               onClick={resetFilters}
-              className="mt-4 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-medium"
+              className="mt-4 min-h-[38px] px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-medium transition-colors"
             >
               Reset filters
             </button>

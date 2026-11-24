@@ -174,7 +174,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
     <form
       onSubmit={handleSubmit}
       style={SURFACE_STYLE[tone]}
-      className="relative z-20 border border-[var(--border-subtle)] rounded-2xl p-4 sm:p-5 shadow-xs backdrop-blur-md transition-colors duration-200"
+      className="relative z-20 border border-[var(--border-subtle)] rounded-2xl p-4 sm:p-5 shadow-[0_2px_10px_-4px_rgba(33,29,48,0.06)] backdrop-blur-md transition-colors duration-200"
     >
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
@@ -191,7 +191,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
             placeholder="Leave a little note, thought, or memory..."
             rows={3}
             maxLength={4000}
-            className="w-full bg-transparent resize-y min-h-[76px] text-[15px] leading-relaxed text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none"
+            className="w-full bg-transparent resize-y min-h-[72px] text-[15px] leading-relaxed text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none"
           />
         </div>
 
@@ -234,7 +234,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                 type="button"
                 onClick={() => handleRemovePreview(item.localId)}
                 aria-label="Remove attached image"
-                className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-[#29253A]/75 text-white flex items-center justify-center hover:bg-[#29253A]"
+                className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-[#211D30]/75 text-white flex items-center justify-center hover:bg-[#211D30]"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -262,7 +262,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
 
       {/* Composer Toolbar */}
       <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 relative">
+        <div className="flex items-center gap-1.5 sm:gap-2 relative">
           <input
             ref={fileInputRef}
             type="file"
@@ -276,7 +276,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
             onClick={() => fileInputRef.current?.click()}
             disabled={previews.length >= 4 || isUploadingAny}
             aria-label="Add images"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors disabled:opacity-45 whitespace-nowrap shrink-0"
+            className="min-h-[36px] inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors disabled:opacity-45 whitespace-nowrap shrink-0"
           >
             <ImagePlus className="w-4 h-4 text-[var(--accent-primary)]" />
             <span>Photos</span>
@@ -287,10 +287,10 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
             onClick={() => setShowStickers((v) => !v)}
             aria-label="Choose a sticker"
             aria-expanded={showStickers}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+            className={`min-h-[36px] inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
               showStickers
                 ? 'bg-[var(--accent-soft-strong)] text-[var(--text-primary)]'
-                : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
             }`}
           >
             <Smile className="w-4 h-4 text-[var(--accent-primary)]" />
@@ -298,7 +298,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
           </button>
 
           {showStickers && (
-            <div className="absolute left-0 top-12 z-30">
+            <div className="absolute left-0 top-11 z-30">
               <StickerPicker
                 selected={sticker}
                 onSelect={setSticker}
@@ -308,7 +308,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
           )}
 
           <div
-            className="flex items-center gap-1.5 pl-2 border-l border-[var(--border-subtle)]"
+            className="flex items-center gap-1.5 pl-2.5 ml-0.5 border-l border-[var(--border-subtle)]"
             role="radiogroup"
             aria-label="Note card color"
           >
@@ -321,10 +321,10 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                 aria-label={`${opt.label} note tone`}
                 onClick={() => setTone(opt.id)}
                 style={{ backgroundColor: opt.bgVar, borderColor: opt.borderVar }}
-                className={`w-6 h-6 rounded-full border transition-transform ${
+                className={`w-5 h-5 rounded-full border transition-all ${
                   tone === opt.id
-                    ? 'ring-2 ring-[var(--ring-focus)] ring-offset-1 scale-110'
-                    : 'hover:scale-105'
+                    ? 'ring-2 ring-[var(--ring-focus)] ring-offset-2 ring-offset-[var(--bg-card)]'
+                    : 'hover:scale-105 opacity-85 hover:opacity-100'
                 }`}
               />
             ))}
@@ -334,7 +334,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors disabled:bg-[var(--accent-soft)] disabled:text-[var(--text-muted)] disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+          className="min-h-[38px] inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-semibold transition-colors disabled:bg-[var(--bg-subtle)] disabled:text-[var(--text-muted)] disabled:cursor-not-allowed whitespace-nowrap shrink-0"
         >
           <Send className="w-3.5 h-3.5" />
           <span>{submitting ? 'Posting...' : 'Post Note'}</span>

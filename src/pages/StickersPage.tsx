@@ -31,10 +31,10 @@ export const StickersPage: React.FC<StickersPageProps> = ({ onUseStickerInNote }
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          <h1 className="font-display text-2xl sm:text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
             Sticker Collection
           </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)] tabular-nums">
+          <p className="mt-1 text-sm text-[var(--text-secondary)] tabular-nums">
             {STICKER_CATALOG.length} custom illustrated stickers to pair with your shared notes
           </p>
         </div>
@@ -50,9 +50,9 @@ export const StickersPage: React.FC<StickersPageProps> = ({ onUseStickerInNote }
               type="button"
               onClick={() => setGroup(tab.id)}
               aria-pressed={group === tab.id}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`min-h-[34px] px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                 group === tab.id
-                  ? 'bg-[var(--accent-soft-strong)] text-[var(--text-primary)] ring-1 ring-[var(--accent-border)]'
+                  ? 'bg-[var(--accent-soft-strong)] text-[var(--text-primary)]'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
@@ -63,15 +63,9 @@ export const StickersPage: React.FC<StickersPageProps> = ({ onUseStickerInNote }
       </div>
 
       {/* Spotlight Preview */}
-      <section
-        className="border border-[var(--border-subtle)] rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-5 backdrop-blur-md"
-        style={{
-          backgroundImage:
-            'linear-gradient(90deg, var(--bg-hero-from), var(--bg-hero-via), var(--bg-hero-to))',
-        }}
-      >
+      <section className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-5 sm:p-6 shadow-[var(--shadow-card)] flex flex-col sm:flex-row items-center justify-between gap-5">
         <div className="flex items-center gap-4">
-          <div className="p-2 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-xs">
+          <div className="p-2.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
             <StickerArtwork sticker={activeMeta.id} className="w-16 h-16 sm:w-20 sm:h-20" />
           </div>
           <div>
@@ -90,7 +84,7 @@ export const StickersPage: React.FC<StickersPageProps> = ({ onUseStickerInNote }
         <button
           type="button"
           onClick={() => onUseStickerInNote(activeMeta.id)}
-          className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
+          className="min-h-[42px] inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
         >
           <span>Use in a new note</span>
           <ArrowRight className="w-3.5 h-3.5" />
@@ -107,10 +101,10 @@ export const StickersPage: React.FC<StickersPageProps> = ({ onUseStickerInNote }
               type="button"
               onClick={() => setSelected(item.id)}
               aria-pressed={isSelected}
-              className={`group rounded-2xl p-4 flex flex-col items-center justify-center gap-2.5 border transition-all backdrop-blur-md ${
+              className={`group rounded-2xl p-4 flex flex-col items-center justify-center gap-2.5 border transition-colors backdrop-blur-md ${
                 isSelected
-                  ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)] ring-2 ring-[var(--accent-border)] shadow-xs'
-                  : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:-translate-y-0.5'
+                  ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)] shadow-[var(--shadow-card)]'
+                  : 'bg-[var(--bg-card)] border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)]'
               }`}
             >
               <StickerArtwork

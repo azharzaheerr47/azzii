@@ -177,7 +177,7 @@ export const CustomBackgroundModal: React.FC<CustomBackgroundModalProps> = ({
       onClick={handleCancel}
     >
       <div
-        className="w-full max-w-2xl bg-[var(--bg-card-elevated)] border border-[var(--border-strong)] rounded-2xl shadow-2xl p-5 sm:p-6 my-auto space-y-5"
+        className="w-full max-w-2xl bg-[var(--bg-card-elevated)] border border-[var(--border-strong)] rounded-2xl shadow-[var(--shadow-elevated)] p-5 sm:p-6 my-auto space-y-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -229,7 +229,7 @@ export const CustomBackgroundModal: React.FC<CustomBackgroundModalProps> = ({
               const file = e.dataTransfer.files?.[0];
               if (file) void handleFileUpload(file);
             }}
-            className={`rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center transition-colors ${
+            className={`rounded-2xl border border-dashed p-8 sm:p-10 text-center transition-colors ${
               dragActive
                 ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)]'
                 : 'border-[var(--border-strong)] bg-[var(--bg-input)]'
@@ -503,13 +503,13 @@ export const CustomBackgroundModal: React.FC<CustomBackgroundModalProps> = ({
         )}
 
         {/* Footer Actions */}
-        <div className="pt-2 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3">
+        <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3">
           {draft ? (
             <button
               type="button"
               disabled={uploading || saving}
               onClick={handleRemove}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-[var(--danger-text)] hover:bg-[var(--danger-bg)] transition-colors"
+              className="min-h-[38px] inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-[var(--danger-text)] hover:bg-[var(--danger-bg)] transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Remove photo</span>
@@ -523,7 +523,7 @@ export const CustomBackgroundModal: React.FC<CustomBackgroundModalProps> = ({
               type="button"
               disabled={uploading || saving}
               onClick={handleCancel}
-              className="px-4 py-2 rounded-xl border border-[var(--border-strong)] text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+              className="min-h-[38px] px-4 py-2 rounded-xl border border-[var(--border-strong)] text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
             >
               Cancel
             </button>
@@ -531,7 +531,7 @@ export const CustomBackgroundModal: React.FC<CustomBackgroundModalProps> = ({
               type="button"
               disabled={!draft || uploading || saving}
               onClick={handleApply}
-              className="px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-semibold transition-colors disabled:opacity-50"
+              className="min-h-[38px] px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-semibold transition-colors disabled:opacity-50"
             >
               {saving ? 'Applying...' : 'Apply background'}
             </button>

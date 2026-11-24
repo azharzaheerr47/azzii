@@ -92,35 +92,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
   return (
     <div
-      className="min-h-screen flex flex-col justify-center px-4 py-10 sm:px-6 lg:px-8 transition-colors duration-300"
+      className="min-h-screen flex flex-col justify-center px-4 py-12 sm:px-6 lg:px-10 transition-colors duration-200"
       style={{
         backgroundColor: 'var(--bg-canvas)',
         backgroundImage:
-          'linear-gradient(135deg, var(--bg-hero-from), var(--bg-hero-via), var(--bg-hero-to))',
+          'radial-gradient(circle at 18% 22%, var(--accent-soft) 0%, transparent 48%)',
       }}
     >
-      <main className="max-w-4xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      <main className="max-w-5xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
         {/* Left: Brand & Cat Duo Illustration */}
         <motion.section
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: 0.2 }}
           className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left"
         >
-          <div className="relative inline-flex items-end mb-6">
-            <CatDuoIllustration size="lg" className="drop-shadow-xs" />
-            <SunflowerAccent className="w-14 h-14 -ml-5 -mb-1 drop-shadow-xs" />
+          <div className="relative inline-flex items-end mb-7">
+            <CatDuoIllustration size="lg" />
+            <SunflowerAccent className="w-12 h-12 -ml-4 -mb-1" />
           </div>
 
-          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text-primary)] text-balance">
+          <h1 className="font-display text-3xl sm:text-[40px] font-bold leading-[1.12] tracking-tight text-[var(--text-primary)] text-balance">
             Our Little Space
           </h1>
-          <p className="mt-3 text-base text-[var(--text-muted)] leading-relaxed max-w-md">
-            A quiet, private corner of the internet made exclusively for two people to leave
-            daily notes, photo memories, compliments, and small illustrated keepsakes.
+          <p className="mt-3.5 text-[15px] sm:text-base text-[var(--text-secondary)] leading-relaxed max-w-md">
+            A quiet, private corner made exclusively for two people to leave daily notes, photo
+            memories, compliments, and illustrated keepsakes.
           </p>
 
-          <div className="mt-6 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+          <div className="mt-6 pt-5 border-t border-[var(--border-subtle)] flex items-center gap-2 text-[13px] text-[var(--text-muted)]">
             <Lock className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
             <span>
               {status.initialized
@@ -132,14 +132,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
         {/* Right: Auth Card */}
         <motion.section
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
-          className="lg:col-span-6 bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 sm:p-8 shadow-xs"
+          transition={{ duration: 0.2, delay: 0.04 }}
+          className="lg:col-span-6 bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl p-6 sm:p-8 shadow-[0_8px_30px_-14px_rgba(33,29,48,0.12)]"
         >
           <div className="mb-6">
             <div
-              className="flex flex-wrap sm:inline-flex gap-1 p-1 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl mb-4"
+              className="grid grid-cols-3 gap-1 p-1 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl mb-5"
               role="tablist"
             >
               <button
@@ -150,10 +150,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   setMode('login');
                   setErrorMsg(null);
                 }}
-                className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+                className={`px-3 py-2 text-xs rounded-lg transition-all whitespace-nowrap ${
                   mode === 'login'
-                    ? 'bg-[var(--bg-card-elevated)] text-[var(--text-primary)] shadow-xs'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    ? 'bg-[var(--bg-card)] font-semibold text-[var(--text-primary)] shadow-2xs border border-[var(--border-subtle)]'
+                    : 'font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'
                 }`}
               >
                 Sign in
@@ -166,10 +166,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   setMode('signup');
                   setErrorMsg(null);
                 }}
-                className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+                className={`px-3 py-2 text-xs rounded-lg transition-all whitespace-nowrap ${
                   mode === 'signup'
-                    ? 'bg-[var(--bg-card-elevated)] text-[var(--text-primary)] shadow-xs'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    ? 'bg-[var(--bg-card)] font-semibold text-[var(--text-primary)] shadow-2xs border border-[var(--border-subtle)]'
+                    : 'font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'
                 }`}
               >
                 Sign up
@@ -182,10 +182,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   setMode('invite');
                   setErrorMsg(null);
                 }}
-                className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+                className={`px-3 py-2 text-xs rounded-lg transition-all whitespace-nowrap ${
                   mode === 'invite'
-                    ? 'bg-[var(--bg-card-elevated)] text-[var(--text-primary)] shadow-xs'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    ? 'bg-[var(--bg-card)] font-semibold text-[var(--text-primary)] shadow-2xs border border-[var(--border-subtle)]'
+                    : 'font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'
                 }`}
               >
                 Join by invite
@@ -201,7 +201,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
             )}
 
-            <h2 className="font-display text-xl font-semibold text-[var(--text-primary)]">
+            <h2 className="font-display text-xl font-bold text-[var(--text-primary)]">
               {mode === 'signup'
                 ? 'Create your space'
                 : mode === 'invite'
@@ -222,7 +222,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div>
                 <label
                   htmlFor="auth-invite"
-                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                  className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5"
                 >
                   Partner invite code
                 </label>
@@ -233,7 +233,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                   placeholder="ABCD-1234"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] tracking-wider uppercase focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20 transition-colors"
                 />
               </div>
             )}
@@ -242,7 +242,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div>
                 <label
                   htmlFor="auth-space-name"
-                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                  className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5"
                 >
                   Space name <span className="font-normal text-[var(--text-muted)]">(optional)</span>
                 </label>
@@ -253,7 +253,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   value={spaceName}
                   onChange={(e) => setSpaceName(e.target.value)}
                   placeholder="Our Little Space"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20 transition-colors"
                 />
               </div>
             )}
@@ -262,7 +262,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div>
                 <label
                   htmlFor="auth-name"
-                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                  className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5"
                 >
                   Your display name
                 </label>
@@ -274,7 +274,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={mode === 'signup' ? 'e.g., Leo' : 'e.g., Maya'}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20 transition-colors"
                 />
               </div>
             )}
@@ -282,7 +282,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div>
               <label
                 htmlFor="auth-email"
-                className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5"
               >
                 Email address
               </label>
@@ -294,14 +294,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20 transition-colors"
               />
             </div>
 
             <div>
               <label
                 htmlFor="auth-password"
-                className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
+                className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5"
               >
                 Password
               </label>
@@ -315,7 +315,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={mode === 'login' ? 'Enter your password' : 'Minimum 8 characters'}
-                  className="w-full pl-3.5 pr-11 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
+                  className="w-full pl-3.5 pr-11 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--ring-focus)]/20 transition-colors"
                 />
                 <button
                   type="button"
@@ -331,10 +331,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
             {(mode === 'signup' || mode === 'invite') && (
               <div>
-                <span className="block text-xs font-medium text-[var(--text-primary)] mb-2">
+                <span className="block text-[13px] font-medium text-[var(--text-primary)] mb-2">
                   Choose your avatar
                 </span>
-                <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2">
                   {AVATAR_CHOICES.map((choice) => (
                     <button
                       key={choice.id}
@@ -344,7 +344,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       aria-pressed={avatarPreset === choice.id}
                       className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
                         avatarPreset === choice.id
-                          ? 'bg-[var(--accent-soft-strong)] border-[var(--accent-primary)] text-[var(--text-primary)]'
+                          ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)] text-[var(--text-primary)]'
                           : 'bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
                       }`}
                     >
@@ -373,7 +373,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-2.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-semibold transition-colors disabled:opacity-60"
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-semibold transition-colors disabled:opacity-60"
             >
               {submitting
                 ? 'Please wait...'
