@@ -5,6 +5,35 @@ import multer2 from "multer";
 
 // src/server/models/mongooseModels.ts
 import mongoose, { Schema } from "mongoose";
+var CustomBackgroundSubSchema = new Schema(
+  {
+    url: { type: String, required: true },
+    publicId: { type: String, default: "" },
+    position: {
+      type: String,
+      enum: ["center", "top", "bottom", "left", "right"],
+      default: "center"
+    },
+    scale: { type: Number, default: 100 },
+    blur: { type: Number, default: 0 },
+    brightness: { type: Number, default: 95 },
+    overlayOpacity: { type: Number, default: 45 },
+    overlayMode: { type: String, enum: ["dark", "light"], default: "dark" }
+  },
+  { _id: false }
+);
+var AppearanceSubSchema = new Schema(
+  {
+    themeMode: {
+      type: String,
+      enum: ["system", "dark", "light", "custom"],
+      default: "system"
+    },
+    romanticMode: { type: Boolean, default: false },
+    customBackground: { type: CustomBackgroundSubSchema, default: null }
+  },
+  { _id: false }
+);
 var UserSchema = new Schema(
   {
     _id: { type: String, required: true },
@@ -20,6 +49,14 @@ var UserSchema = new Schema(
     },
     bio: { type: String, default: "", maxlength: 160 },
     role: { type: String, enum: ["founder", "partner"], required: true },
+    appearance: {
+      type: AppearanceSubSchema,
+      default: () => ({
+        themeMode: "system",
+        romanticMode: false,
+        customBackground: null
+      })
+    },
     createdAt: { type: Date, default: () => /* @__PURE__ */ new Date() }
   },
   { versionKey: false }
@@ -267,6 +304,30 @@ var changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
   newPassword: z.string().min(8, "New password must be at least 8 characters").max(100)
 });
+var THEME_MODES = ["system", "dark", "light", "custom"];
+var BACKGROUND_POSITIONS = ["center", "top", "bottom", "left", "right"];
+var OVERLAY_MODES = ["dark", "light"];
+var customBackgroundSchema = z.object({
+  url: z.string().trim().min(1, "Background image URL is required").max(1e3).refine(
+    (val) => val.startsWith("https://") || val.startsWith("/api/media/"),
+    "Invalid background image URL."
+  ),
+  publicId: z.string().trim().max(240).default(""),
+  position: z.enum(BACKGROUND_POSITIONS).default("center"),
+  scale: z.number().min(100).max(150).default(100),
+  blur: z.number().min(0).max(24).default(0),
+  brightness: z.number().min(40).max(130).default(95),
+  overlayOpacity: z.number().min(15).max(85).default(45),
+  overlayMode: z.enum(OVERLAY_MODES).default("dark")
+});
+var updateAppearanceSchema = z.object({
+  themeMode: z.enum(THEME_MODES),
+  romanticMode: z.boolean().default(false),
+  customBackground: customBackgroundSchema.nullable().default(null)
+}).refine(
+  (data) => data.themeMode !== "custom" || data.customBackground !== null && Boolean(data.customBackground.url),
+  { message: "Upload or select a photo before activating Custom Photo theme." }
+);
 
 // src/server/auth/crypto.ts
 import crypto from "node:crypto";
@@ -460,6 +521,65 @@ function selectNextCompliment(allComplimentsForRecipient, currentCycleDraws, ran
   };
 }
 
+// src/lib/themeLogic.ts
+var DEFAULT_CUSTOM_BACKGROUND_SETTINGS = {
+  position: "center",
+  scale: 100,
+  blur: 0,
+  brightness: 95,
+  overlayOpacity: 45,
+  overlayMode: "dark"
+};
+var DEFAULT_USER_APPEARANCE = {
+  themeMode: "system",
+  romanticMode: false,
+  customBackground: null
+};
+function clampNumber(value, min, max, fallback) {
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(num)));
+}
+function normalizeCustomBackground(raw) {
+  if (!raw || typeof raw.url !== "string" || !raw.url.trim()) {
+    return null;
+  }
+  const position = raw.position === "top" || raw.position === "bottom" || raw.position === "left" || raw.position === "right" ? raw.position : "center";
+  const overlayMode = raw.overlayMode === "light" ? "light" : "dark";
+  return {
+    url: raw.url.trim(),
+    publicId: typeof raw.publicId === "string" ? raw.publicId.trim() : "",
+    position,
+    scale: clampNumber(raw.scale, 100, 150, DEFAULT_CUSTOM_BACKGROUND_SETTINGS.scale),
+    blur: clampNumber(raw.blur, 0, 24, DEFAULT_CUSTOM_BACKGROUND_SETTINGS.blur),
+    brightness: clampNumber(
+      raw.brightness,
+      40,
+      130,
+      DEFAULT_CUSTOM_BACKGROUND_SETTINGS.brightness
+    ),
+    overlayOpacity: clampNumber(
+      raw.overlayOpacity,
+      15,
+      85,
+      DEFAULT_CUSTOM_BACKGROUND_SETTINGS.overlayOpacity
+    ),
+    overlayMode
+  };
+}
+function normalizeAppearance(raw) {
+  if (!raw || typeof raw !== "object") {
+    return { ...DEFAULT_USER_APPEARANCE, customBackground: null };
+  }
+  const themeMode = raw.themeMode === "dark" || raw.themeMode === "light" || raw.themeMode === "custom" || raw.themeMode === "system" ? raw.themeMode : "system";
+  const customBackground = normalizeCustomBackground(raw.customBackground);
+  return {
+    themeMode: themeMode === "custom" && !customBackground ? "system" : themeMode,
+    romanticMode: Boolean(raw.romanticMode),
+    customBackground
+  };
+}
+
 // src/server/media/imageService.ts
 import crypto2 from "node:crypto";
 import fs from "node:fs";
@@ -549,7 +669,7 @@ function validateUploadedImage(buffer, mimetype) {
     height: Math.max(1, dims.height)
   };
 }
-async function storeImageBuffer(buffer, mimetype) {
+async function storeImageBuffer(buffer, mimetype, folder = "our-little-space/notes") {
   const { format, width, height } = validateUploadedImage(buffer, mimetype);
   const id = crypto2.randomUUID();
   const uploadedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -558,7 +678,7 @@ async function storeImageBuffer(buffer, mimetype) {
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
-          folder: "our-little-space/notes",
+          folder,
           resource_type: "image",
           allowed_formats: ["jpg", "jpeg", "png", "webp"]
         },
@@ -719,6 +839,7 @@ function toPublicUser(u) {
     avatarPreset: u.avatarPreset,
     bio: u.bio || "",
     role: u.role,
+    appearance: normalizeAppearance(u.appearance),
     createdAt: u.createdAt
   };
 }
@@ -733,6 +854,7 @@ function mongoUserToRecord(doc) {
     avatarPreset: doc.avatarPreset,
     bio: doc.bio || "",
     role: doc.role,
+    appearance: normalizeAppearance(doc.appearance),
     createdAt: doc.createdAt.toISOString()
   };
 }
@@ -910,6 +1032,7 @@ async function signupWithNewSpace(input) {
         avatar: "",
         avatarPreset: input.avatarPreset,
         role: "founder",
+        appearance: DEFAULT_USER_APPEARANCE,
         createdAt: now
       });
       await SpaceModel.findByIdAndUpdate(
@@ -952,6 +1075,7 @@ async function signupWithNewSpace(input) {
     avatar: "",
     avatarPreset: input.avatarPreset,
     role: "founder",
+    appearance: DEFAULT_USER_APPEARANCE,
     createdAt: now.toISOString()
   };
   db.users.push(newUser);
@@ -996,6 +1120,7 @@ async function redeemPartnerInvite(input) {
         avatar: "",
         avatarPreset: input.avatarPreset,
         role: "partner",
+        appearance: DEFAULT_USER_APPEARANCE,
         createdAt: now
       });
       await ComplimentModel.updateMany(
@@ -1044,6 +1169,7 @@ async function redeemPartnerInvite(input) {
     avatarPreset: input.avatarPreset,
     bio: "",
     role: "partner",
+    appearance: DEFAULT_USER_APPEARANCE,
     createdAt: now.toISOString()
   };
   db.users.push(newUser);
@@ -1182,6 +1308,68 @@ async function changeUserPassword(userId, currentPassword, newPassword) {
   }
   db.users[idx].passwordHash = hashPassword(newPassword);
   writeLocalDb(db);
+}
+async function isImagePublicIdReferenced(publicId, ignoreUserId) {
+  if (!publicId) return false;
+  const mongo = await useMongo();
+  if (mongo) {
+    const [noteRef, userRef] = await Promise.all([
+      NoteModel.exists({ "images.cloudinaryPublicId": publicId, isDeleted: false }),
+      UserModel.exists({
+        ...ignoreUserId ? { _id: { $ne: ignoreUserId } } : {},
+        "appearance.customBackground.publicId": publicId
+      })
+    ]);
+    return Boolean(noteRef || userRef);
+  }
+  const db = readLocalDb();
+  const inNotes = db.notes.some(
+    (n) => !n.isDeleted && n.images.some((img) => img.cloudinaryPublicId === publicId)
+  );
+  if (inNotes) return true;
+  return db.users.some(
+    (u) => u.id !== ignoreUserId && u.appearance?.customBackground?.publicId === publicId
+  );
+}
+async function updateUserAppearance(userId, rawAppearance) {
+  const nextAppearance = normalizeAppearance(rawAppearance);
+  const mongo = await useMongo();
+  if (mongo) {
+    const currentUser = await UserModel.findById(userId);
+    if (!currentUser) throw new Error("NOT_FOUND");
+    const prevPublicId2 = currentUser.appearance?.customBackground?.publicId || "";
+    const nextPublicId2 = nextAppearance.customBackground?.publicId || "";
+    const updated = await UserModel.findByIdAndUpdate(
+      userId,
+      { $set: { appearance: nextAppearance } },
+      { new: true }
+    );
+    if (!updated) throw new Error("NOT_FOUND");
+    if (prevPublicId2 && prevPublicId2 !== nextPublicId2) {
+      const stillReferenced = await isImagePublicIdReferenced(prevPublicId2, userId);
+      if (!stillReferenced) {
+        await deleteStoredImage(prevPublicId2);
+      }
+    }
+    return toPublicUser(mongoUserToRecord(updated));
+  }
+  const db = readLocalDb();
+  const idx = db.users.findIndex((u) => u.id === userId);
+  if (idx === -1) throw new Error("NOT_FOUND");
+  const prevPublicId = db.users[idx].appearance?.customBackground?.publicId || "";
+  const nextPublicId = nextAppearance.customBackground?.publicId || "";
+  db.users[idx] = {
+    ...db.users[idx],
+    appearance: nextAppearance
+  };
+  writeLocalDb(db);
+  if (prevPublicId && prevPublicId !== nextPublicId) {
+    const stillReferenced = await isImagePublicIdReferenced(prevPublicId, userId);
+    if (!stillReferenced) {
+      await deleteStoredImage(prevPublicId);
+    }
+  }
+  return toPublicUser(db.users[idx]);
 }
 async function getSpaceSettings(spaceId) {
   const mongo = await useMongo();
@@ -2162,6 +2350,26 @@ function createApiRouter() {
       }
     })
   );
+  router.patch(
+    "/profile/appearance",
+    requireAuth,
+    writeLimiter,
+    asyncHandler(async (req, res) => {
+      const parsed = updateAppearanceSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: parsed.error.issues[0]?.message || "Invalid appearance preferences."
+        });
+        return;
+      }
+      try {
+        const updated = await updateUserAppearance(req.authUser.id, parsed.data);
+        res.json({ user: updated });
+      } catch (err) {
+        respondWithServerError(res, err, "Failed to save theme preferences.");
+      }
+    })
+  );
   router.get(
     "/notes",
     requireAuth,
@@ -2364,9 +2572,10 @@ function createApiRouter() {
         return;
       }
       try {
+        const folder = req.query.purpose === "theme" ? "our-little-space/themes" : "our-little-space/notes";
         const uploaded = [];
         for (const file of files) {
-          const item = await storeImageBuffer(file.buffer, file.mimetype);
+          const item = await storeImageBuffer(file.buffer, file.mimetype, folder);
           uploaded.push(item);
         }
         res.status(201).json({ images: uploaded });
@@ -2388,6 +2597,13 @@ function createApiRouter() {
         return;
       }
       try {
+        const inUse = await isImagePublicIdReferenced(publicId);
+        if (inUse) {
+          res.status(409).json({
+            error: "Image is currently in use and cannot be deleted from here."
+          });
+          return;
+        }
         await deleteStoredImage(publicId);
         res.json({ ok: true });
       } catch (err) {

@@ -54,10 +54,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   : Info;
             const styleClass =
               toast.kind === 'error'
-                ? 'bg-[#FFF5F7] border-[#E11D48]/25 text-[#881337]'
+                ? 'bg-[var(--danger-bg)] border-[var(--danger-border)] text-[var(--danger-text)]'
                 : toast.kind === 'success'
-                  ? 'bg-white border-[#6554A4]/25 text-[#29253A]'
-                  : 'bg-white border-[#6554A4]/20 text-[#29253A]';
+                  ? 'bg-[var(--bg-card-elevated)] border-[var(--border-strong)] text-[var(--text-primary)]'
+                  : 'bg-[var(--bg-card-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]';
 
             return (
               <motion.div
@@ -71,7 +71,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               >
                 <Icon
                   className={`w-4 h-4 shrink-0 ${
-                    toast.kind === 'error' ? 'text-[#E11D48]' : 'text-[#6554A4]'
+                    toast.kind === 'error'
+                      ? 'text-[var(--danger-text)]'
+                      : 'text-[var(--accent-primary)]'
                   }`}
                 />
                 <span className="flex-1 leading-snug">{toast.message}</span>
@@ -79,7 +81,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   type="button"
                   onClick={() => dismiss(toast.id)}
                   aria-label="Dismiss notification"
-                  className="p-1 rounded-lg text-[#645E7B] hover:text-[#29253A] hover:bg-black/5"
+                  className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

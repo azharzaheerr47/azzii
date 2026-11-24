@@ -1,5 +1,11 @@
 import mongoose, { Schema, type Model, type Document } from 'mongoose';
-import type { AvatarPreset, ComplimentCategory, NoteTone, StickerId } from '../../types/index';
+import type {
+  AvatarPreset,
+  ComplimentCategory,
+  NoteTone,
+  StickerId,
+  UserAppearance,
+} from '../../types/index';
 
 export interface IUserDoc extends Document<string> {
   _id: string;
@@ -11,6 +17,7 @@ export interface IUserDoc extends Document<string> {
   avatarPreset: AvatarPreset;
   bio?: string;
   role: 'founder' | 'partner';
+  appearance?: UserAppearance;
   createdAt: Date;
 }
 
@@ -69,6 +76,37 @@ export interface IComplimentDrawDoc extends Document<string> {
   cycleNumber: number;
 }
 
+const CustomBackgroundSubSchema = new Schema(
+  {
+    url: { type: String, required: true },
+    publicId: { type: String, default: '' },
+    position: {
+      type: String,
+      enum: ['center', 'top', 'bottom', 'left', 'right'],
+      default: 'center',
+    },
+    scale: { type: Number, default: 100 },
+    blur: { type: Number, default: 0 },
+    brightness: { type: Number, default: 95 },
+    overlayOpacity: { type: Number, default: 45 },
+    overlayMode: { type: String, enum: ['dark', 'light'], default: 'dark' },
+  },
+  { _id: false },
+);
+
+const AppearanceSubSchema = new Schema(
+  {
+    themeMode: {
+      type: String,
+      enum: ['system', 'dark', 'light', 'custom'],
+      default: 'system',
+    },
+    romanticMode: { type: Boolean, default: false },
+    customBackground: { type: CustomBackgroundSubSchema, default: null },
+  },
+  { _id: false },
+);
+
 const UserSchema = new Schema<IUserDoc>(
   {
     _id: { type: String, required: true },
@@ -84,6 +122,14 @@ const UserSchema = new Schema<IUserDoc>(
     },
     bio: { type: String, default: '', maxlength: 160 },
     role: { type: String, enum: ['founder', 'partner'], required: true },
+    appearance: {
+      type: AppearanceSubSchema,
+      default: () => ({
+        themeMode: 'system',
+        romanticMode: false,
+        customBackground: null,
+      }),
+    },
     createdAt: { type: Date, default: () => new Date() },
   },
   { versionKey: false },

@@ -91,7 +91,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFF9EA] via-[#FCFAFF] to-[#E9DFFF]/45 flex flex-col justify-center px-4 py-10 sm:px-6 lg:px-8">
+    <div
+      className="min-h-screen flex flex-col justify-center px-4 py-10 sm:px-6 lg:px-8 transition-colors duration-300"
+      style={{
+        backgroundColor: 'var(--bg-canvas)',
+        backgroundImage:
+          'linear-gradient(135deg, var(--bg-hero-from), var(--bg-hero-via), var(--bg-hero-to))',
+      }}
+    >
       <main className="max-w-4xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         {/* Left: Brand & Cat Duo Illustration */}
         <motion.section
@@ -105,16 +112,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <SunflowerAccent className="w-14 h-14 -ml-5 -mb-1 drop-shadow-xs" />
           </div>
 
-          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-[#29253A] text-balance">
+          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text-primary)] text-balance">
             Our Little Space
           </h1>
-          <p className="mt-3 text-base text-[#817B90] leading-relaxed max-w-md">
+          <p className="mt-3 text-base text-[var(--text-muted)] leading-relaxed max-w-md">
             A quiet, private corner of the internet made exclusively for two people to leave
             daily notes, photo memories, compliments, and small illustrated keepsakes.
           </p>
 
-          <div className="mt-6 flex items-center gap-2 text-xs text-[#817B90]">
-            <Lock className="w-3.5 h-3.5 text-[#6554A4]" />
+          <div className="mt-6 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+            <Lock className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
             <span>
               {status.initialized
                 ? 'Private 2-person space · Sign in, create a new space, or join by invite'
@@ -128,11 +135,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: 0.05 }}
-          className="lg:col-span-6 bg-white border border-[#6554A4]/15 rounded-2xl p-6 sm:p-8 shadow-xs"
+          className="lg:col-span-6 bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-6 sm:p-8 shadow-xs"
         >
           <div className="mb-6">
             <div
-              className="flex flex-wrap sm:inline-flex gap-1 p-1 bg-[#FAF9FE] border border-[#6554A4]/12 rounded-xl mb-4"
+              className="flex flex-wrap sm:inline-flex gap-1 p-1 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl mb-4"
               role="tablist"
             >
               <button
@@ -145,8 +152,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 }}
                 className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
                   mode === 'login'
-                    ? 'bg-white text-[#29253A] shadow-xs'
-                    : 'text-[#645E7B] hover:text-[#29253A]'
+                    ? 'bg-[var(--bg-card-elevated)] text-[var(--text-primary)] shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 Sign in
@@ -161,8 +168,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 }}
                 className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
                   mode === 'signup'
-                    ? 'bg-white text-[#29253A] shadow-xs'
-                    : 'text-[#645E7B] hover:text-[#29253A]'
+                    ? 'bg-[var(--bg-card-elevated)] text-[var(--text-primary)] shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 Sign up
@@ -177,8 +184,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 }}
                 className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
                   mode === 'invite'
-                    ? 'bg-white text-[#29253A] shadow-xs'
-                    : 'text-[#645E7B] hover:text-[#29253A]'
+                    ? 'bg-[var(--bg-card-elevated)] text-[var(--text-primary)] shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 Join by invite
@@ -186,22 +193,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
 
             {normalizedUrlInvite && mode === 'invite' && (
-              <div className="mb-4 flex items-center gap-2 rounded-xl bg-[#E9DFFF]/55 border border-[#BFA7F2]/70 px-3.5 py-2.5 text-xs text-[#29253A]">
-                <Link2 className="w-4 h-4 text-[#6554A4] shrink-0" />
+              <div className="mb-4 flex items-center gap-2 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent-border)] px-3.5 py-2.5 text-xs text-[var(--text-primary)]">
+                <Link2 className="w-4 h-4 text-[var(--accent-primary)] shrink-0" />
                 <span>
                   Partner invite link applied (<strong className="font-semibold">{normalizedUrlInvite}</strong>). Complete your account details below to join.
                 </span>
               </div>
             )}
 
-            <h2 className="font-display text-xl font-semibold text-[#29253A]">
+            <h2 className="font-display text-xl font-semibold text-[var(--text-primary)]">
               {mode === 'signup'
                 ? 'Create your space'
                 : mode === 'invite'
                   ? 'Join your partner'
                   : 'Welcome back'}
             </h2>
-            <p className="mt-1 text-sm text-[#645E7B]">
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
               {mode === 'signup'
                 ? 'Create your account and get a private invite link so your partner can join your 2-person space.'
                 : mode === 'invite'
@@ -215,7 +222,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div>
                 <label
                   htmlFor="auth-invite"
-                  className="block text-xs font-medium text-[#29253A] mb-1.5"
+                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
                 >
                   Partner invite code
                 </label>
@@ -226,7 +233,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                   placeholder="ABCD-1234"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
                 />
               </div>
             )}
@@ -235,9 +242,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div>
                 <label
                   htmlFor="auth-space-name"
-                  className="block text-xs font-medium text-[#29253A] mb-1.5"
+                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
                 >
-                  Space name <span className="font-normal text-[#645E7B]">(optional)</span>
+                  Space name <span className="font-normal text-[var(--text-muted)]">(optional)</span>
                 </label>
                 <input
                   id="auth-space-name"
@@ -246,7 +253,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   value={spaceName}
                   onChange={(e) => setSpaceName(e.target.value)}
                   placeholder="Our Little Space"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
                 />
               </div>
             )}
@@ -255,7 +262,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div>
                 <label
                   htmlFor="auth-name"
-                  className="block text-xs font-medium text-[#29253A] mb-1.5"
+                  className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
                 >
                   Your display name
                 </label>
@@ -267,7 +274,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={mode === 'signup' ? 'e.g., Leo' : 'e.g., Maya'}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
                 />
               </div>
             )}
@@ -275,7 +282,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div>
               <label
                 htmlFor="auth-email"
-                className="block text-xs font-medium text-[#29253A] mb-1.5"
+                className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
               >
                 Email address
               </label>
@@ -287,14 +294,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
               />
             </div>
 
             <div>
               <label
                 htmlFor="auth-password"
-                className="block text-xs font-medium text-[#29253A] mb-1.5"
+                className="block text-xs font-medium text-[var(--text-primary)] mb-1.5"
               >
                 Password
               </label>
@@ -308,14 +315,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={mode === 'login' ? 'Enter your password' : 'Minimum 8 characters'}
-                  className="w-full pl-3.5 pr-11 py-2.5 rounded-xl border border-[#6554A4]/20 bg-[#FAF9FE]/60 text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
+                  className="w-full pl-3.5 pr-11 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   aria-pressed={showPassword}
-                  className="absolute inset-y-0 right-1.5 my-1 px-2 rounded-lg text-[#645E7B] hover:text-[#29253A] hover:bg-[#E9DFFF]/40 flex items-center justify-center transition-colors"
+                  className="absolute inset-y-0 right-1.5 my-1 px-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center justify-center transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -324,7 +331,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
             {(mode === 'signup' || mode === 'invite') && (
               <div>
-                <span className="block text-xs font-medium text-[#29253A] mb-2">
+                <span className="block text-xs font-medium text-[var(--text-primary)] mb-2">
                   Choose your avatar
                 </span>
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -337,8 +344,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       aria-pressed={avatarPreset === choice.id}
                       className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
                         avatarPreset === choice.id
-                          ? 'bg-[#E9DFFF]/70 border-[#6554A4] text-[#29253A]'
-                          : 'bg-white border-[#6554A4]/15 text-[#645E7B] hover:border-[#6554A4]/40'
+                          ? 'bg-[var(--accent-soft-strong)] border-[var(--accent-primary)] text-[var(--text-primary)]'
+                          : 'bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
                       }`}
                     >
                       <PartnerAvatar name={name || choice.label} preset={choice.id} size="xs" />
@@ -352,11 +359,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {errorMsg && (
               <div
                 role="alert"
-                className="text-xs text-[#B91C1C] bg-[#FFF5F7] border border-[#E11D48]/20 rounded-xl px-3.5 py-2.5 space-y-1"
+                className="text-xs text-[var(--danger-text)] bg-[var(--danger-bg)] border border-[var(--danger-border)] rounded-xl px-3.5 py-2.5 space-y-1"
               >
                 <p className="font-medium">{errorMsg}</p>
                 {mode === 'login' && errorMsg.toLowerCase().includes('invalid email or password') && (
-                  <p className="text-[#9F1239]/90">
+                  <p className="opacity-90">
                     Double-check your email and use the eye icon to verify your password, or switch to Sign up to start a fresh space.
                   </p>
                 )}
@@ -366,7 +373,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-2.5 px-4 rounded-xl bg-[#6554A4] hover:bg-[#534391] text-white text-sm font-semibold transition-colors disabled:opacity-60"
+              className="w-full py-2.5 px-4 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-semibold transition-colors disabled:opacity-60"
             >
               {submitting
                 ? 'Please wait...'

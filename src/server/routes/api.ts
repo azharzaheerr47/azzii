@@ -13,6 +13,7 @@ import {
   loginSchema,
   redeemInviteSchema,
   setupAccountSchema,
+  updateAppearanceSchema,
   updateNoteSchema,
   updateProfileSchema,
   updateSpaceSettingsSchema,
@@ -37,6 +38,7 @@ import {
   getSpaceSettings,
   getSpaceStatus,
   getUserById,
+  isImagePublicIdReferenced,
   listNotes,
   listSpaceMembers,
   redeemPartnerInvite,
@@ -46,6 +48,7 @@ import {
   softDeleteNoteByAuthor,
   updateNoteByAuthor,
   updateSpaceSettings,
+  updateUserAppearance,
   updateUserProfile,
 } from '../db/store';
 import {
@@ -478,6 +481,29 @@ export function createApiRouter(): express.Router {
     }),
   );
 
+  // Update own personalized theme & appearance (strictly scoped to current user)
+  router.patch(
+    '/profile/appearance',
+    requireAuth,
+    writeLimiter,
+    asyncHandler(async (req, res) => {
+      const parsed = updateAppearanceSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: parsed.error.issues[0]?.message || 'Invalid appearance preferences.',
+        });
+        return;
+      }
+
+      try {
+        const updated = await updateUserAppearance(req.authUser!.id, parsed.data);
+        res.json({ user: updated });
+      } catch (err) {
+        respondWithServerError(res, err, 'Failed to save theme preferences.');
+      }
+    }),
+  );
+
   // List shared notes (supports server-side search, author filter, sort)
   router.get(
     '/notes',
@@ -701,9 +727,11 @@ export function createApiRouter(): express.Router {
       }
 
       try {
+        const folder =
+          req.query.purpose === 'theme' ? 'our-little-space/themes' : 'our-little-space/notes';
         const uploaded = [];
         for (const file of files) {
-          const item = await storeImageBuffer(file.buffer, file.mimetype);
+          const item = await storeImageBuffer(file.buffer, file.mimetype, folder);
           uploaded.push(item);
         }
         res.status(201).json({ images: uploaded });
@@ -715,7 +743,7 @@ export function createApiRouter(): express.Router {
     }),
   );
 
-  // Delete pending uploaded image (before note publish)
+  // Delete pending uploaded image (never delete images referenced by saved notes or user themes)
   router.delete(
     '/upload',
     requireAuth,
@@ -727,6 +755,13 @@ export function createApiRouter(): express.Router {
         return;
       }
       try {
+        const inUse = await isImagePublicIdReferenced(publicId);
+        if (inUse) {
+          res.status(409).json({
+            error: 'Image is currently in use and cannot be deleted from here.',
+          });
+          return;
+        }
         await deleteStoredImage(publicId);
         res.json({ ok: true });
       } catch (err) {

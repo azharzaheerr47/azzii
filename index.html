@@ -53,8 +53,44 @@
         }
       }
     </script>
+    <script>
+      (function () {
+        try {
+          var sysDark =
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var raw = window.localStorage.getItem('ols_theme_cache');
+          var parsed = raw ? JSON.parse(raw) : null;
+          var themeMode = parsed && parsed.themeMode ? parsed.themeMode : 'system';
+          var romanticMode = Boolean(parsed && parsed.romanticMode);
+          var overlayMode = parsed && parsed.overlayMode === 'light' ? 'light' : 'dark';
+          var effective = romanticMode
+            ? 'romantic'
+            : themeMode === 'custom' && parsed && parsed.hasCustomBg
+              ? 'custom'
+              : themeMode === 'dark' || (themeMode === 'system' && sysDark)
+                ? 'dark'
+                : 'light';
+          var surface =
+            effective === 'dark' || (effective === 'custom' && overlayMode === 'dark')
+              ? 'dark'
+              : 'light';
+          var root = document.documentElement;
+          root.dataset.theme = effective;
+          root.dataset.surface = surface;
+          root.classList.toggle('dark', surface === 'dark');
+        } catch (e) {
+          var fallbackDark =
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.dataset.theme = fallbackDark ? 'dark' : 'light';
+          document.documentElement.dataset.surface = fallbackDark ? 'dark' : 'light';
+          document.documentElement.classList.toggle('dark', fallbackDark);
+        }
+      })();
+    </script>
   </head>
-  <body class="bg-[#FAF9FE] text-[#29253A] antialiased selection:bg-[#E9DFFF] selection:text-[#29253A]">
+  <body class="bg-[var(--bg-canvas)] text-[var(--text-primary)] antialiased selection:bg-[var(--accent-soft-strong)] selection:text-[var(--text-primary)]">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

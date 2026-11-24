@@ -80,8 +80,10 @@ export const PartnerAvatar: React.FC<PartnerAvatarProps> = ({
     <span className={`relative inline-flex shrink-0 ${sizeMap[size]}`}>
       <span
         className={`w-full h-full rounded-full overflow-hidden border ${
-          isOnline ? 'border-[#6554A4] ring-2 ring-[#BFA7F2]/60' : 'border-[#6554A4]/20'
-        } bg-white flex items-center justify-center`}
+          isOnline
+            ? 'border-[var(--accent-primary)] ring-2 ring-[var(--accent-border)]'
+            : 'border-[var(--border-subtle)]'
+        } bg-[var(--bg-card)] flex items-center justify-center`}
       >
         {avatarUrl ? (
           <img

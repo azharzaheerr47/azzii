@@ -135,12 +135,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Sunflower-Warmed Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#FFF9EA]/90 via-white to-[#E9DFFF]/40 border border-[#F3BB38]/35 rounded-3xl p-6 sm:p-8 shadow-xs">
+      {/* Theme-Responsive Hero Section */}
+      <section
+        className="relative overflow-hidden border border-[var(--accent-border)] rounded-3xl p-6 sm:p-8 shadow-xs backdrop-blur-md transition-colors duration-300"
+        style={{
+          backgroundImage:
+            'linear-gradient(135deg, var(--bg-hero-from), var(--bg-hero-via), var(--bg-hero-to))',
+        }}
+      >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2.5 max-w-2xl">
-            <div className="flex flex-wrap items-center gap-x-2 text-xs text-[#817B90]">
-              <span className="inline-flex items-center gap-1 font-medium text-[#6554A4]">
+            <div className="flex flex-wrap items-center gap-x-2 text-xs text-[var(--text-muted)]">
+              <span className="inline-flex items-center gap-1 font-medium text-[var(--accent-primary)]">
                 <Lock className="w-3.5 h-3.5" />
                 <span>Private space for two</span>
               </span>
@@ -148,19 +154,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <time className="tabular-nums">{formatHeaderDate()}</time>
             </div>
 
-            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[#29253A] text-balance">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] text-balance">
               {getGreeting()}, {user.name}
             </h1>
-            <p className="text-sm sm:text-[15px] text-[#817B90] leading-relaxed">
+            <p className="text-sm sm:text-[15px] text-[var(--text-secondary)] leading-relaxed">
               {space.welcomeMessage}
             </p>
-            <p className="text-xs italic text-[#817B90]/95 pt-1">
+            <p className="text-xs italic text-[var(--text-muted)] pt-1">
               “{dailyQuote}”
             </p>
           </div>
 
           <div className="flex items-center gap-4 self-start md:self-auto shrink-0">
-            <div className="flex items-center gap-3 bg-white/95 border border-[#6554A4]/14 rounded-2xl px-4 py-3 shadow-2xs">
+            <div className="flex items-center gap-3 bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl px-4 py-3 shadow-2xs">
               <div className="flex items-center -space-x-2">
                 {members.map((m) => (
                   <PartnerAvatar
@@ -174,10 +180,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 ))}
               </div>
               <div className="text-xs leading-snug">
-                <p className="font-semibold text-[#29253A]">
+                <p className="font-semibold text-[var(--text-primary)]">
                   {partner ? `${user.name} & ${partner.name}` : `${user.name} · Waiting for partner`}
                 </p>
-                <p className="text-[#817B90]">
+                <p className="text-[var(--text-muted)]">
                   {partner
                     ? partner.bio
                       ? partner.bio
@@ -195,12 +201,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* Partner 2 Invite Banner (shown only while slot 2 is open) */}
       {status.userCount < status.maxUsers && (
-        <section className="bg-[#E9DFFF]/45 border border-[#BFA7F2]/60 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <section className="bg-[var(--accent-soft)] backdrop-blur-md border border-[var(--accent-border)] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="font-display text-sm font-semibold text-[#29253A]">
+            <h2 className="font-display text-sm font-semibold text-[var(--text-primary)]">
               Invite your partner to claim the second account
             </h2>
-            <p className="mt-0.5 text-xs text-[#817B90]">
+            <p className="mt-0.5 text-xs text-[var(--text-muted)]">
               Only one more account can ever join this space. Share a direct invite link or
               one-time code with them.
             </p>
@@ -208,13 +214,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {inviteCode ? (
               <>
-                <code className="px-3 py-1.5 rounded-xl bg-white border border-[#6554A4]/20 text-xs font-semibold tracking-wider text-[#29253A] tabular-nums">
+                <code className="px-3 py-1.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs font-semibold tracking-wider text-[var(--text-primary)] tabular-nums">
                   {inviteCode}
                 </code>
                 <button
                   type="button"
                   onClick={() => handleCopyInvite('link')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6554A4] text-white text-xs font-medium hover:bg-[#534391] whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-medium whitespace-nowrap"
                 >
                   {copiedType === 'link' ? (
                     <Check className="w-3.5 h-3.5" />
@@ -226,7 +232,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <button
                   type="button"
                   onClick={() => handleCopyInvite('code')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#6554A4]/20 text-[#29253A] text-xs font-medium hover:bg-[#FCFAFF] whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-medium hover:bg-[var(--bg-hover)] whitespace-nowrap"
                 >
                   {copiedType === 'code' ? (
                     <Check className="w-3.5 h-3.5" />
@@ -241,7 +247,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 type="button"
                 disabled={generatingInvite}
                 onClick={handleGenerateInvite}
-                className="px-3.5 py-2 rounded-xl bg-[#6554A4] text-white text-xs font-medium hover:bg-[#534391] disabled:opacity-60 whitespace-nowrap"
+                className="px-3.5 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-medium disabled:opacity-60 whitespace-nowrap"
               >
                 {generatingInvite ? 'Generating...' : 'Create invite link'}
               </button>
@@ -255,15 +261,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <button
           type="button"
           onClick={() => onNavigate('notes')}
-          className="group text-left bg-white hover:bg-[#E9DFFF]/30 border border-[#6554A4]/14 rounded-2xl p-4 sm:p-5 transition-colors"
+          className="group text-left bg-[var(--bg-card)] backdrop-blur-md hover:bg-[var(--tile-notes-hover)] border border-[var(--border-subtle)] rounded-2xl p-4 sm:p-5 transition-colors"
         >
-          <div className="w-9 h-9 rounded-xl bg-[#E9DFFF]/70 flex items-center justify-center mb-3">
-            <BookOpen className="w-4 h-4 text-[#6554A4]" />
+          <div className="w-9 h-9 rounded-xl bg-[var(--tile-notes-bg)] flex items-center justify-center mb-3">
+            <BookOpen className="w-4 h-4 text-[var(--accent-primary)]" />
           </div>
-          <h2 className="font-display text-sm font-semibold text-[#29253A] group-hover:text-[#6554A4] transition-colors">
+          <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
             Our Notes
           </h2>
-          <p className="mt-0.5 text-xs text-[#817B90] tabular-nums">
+          <p className="mt-0.5 text-xs text-[var(--text-muted)] tabular-nums">
             {activeNotes.length} {activeNotes.length === 1 ? 'note' : 'notes'} shared
           </p>
         </button>
@@ -271,15 +277,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <button
           type="button"
           onClick={() => onNavigate('memories')}
-          className="group text-left bg-white hover:bg-[#FFD6E7]/30 border border-[#6554A4]/14 rounded-2xl p-4 sm:p-5 transition-colors"
+          className="group text-left bg-[var(--bg-card)] backdrop-blur-md hover:bg-[var(--tile-memories-hover)] border border-[var(--border-subtle)] rounded-2xl p-4 sm:p-5 transition-colors"
         >
-          <div className="w-9 h-9 rounded-xl bg-[#FFD6E7]/75 flex items-center justify-center mb-3">
-            <Images className="w-4 h-4 text-[#29253A]" />
+          <div className="w-9 h-9 rounded-xl bg-[var(--tile-memories-bg)] flex items-center justify-center mb-3">
+            <Images className="w-4 h-4 text-[var(--text-primary)]" />
           </div>
-          <h2 className="font-display text-sm font-semibold text-[#29253A] group-hover:text-[#6554A4] transition-colors">
+          <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
             Our Memories
           </h2>
-          <p className="mt-0.5 text-xs text-[#817B90] tabular-nums">
+          <p className="mt-0.5 text-xs text-[var(--text-muted)] tabular-nums">
             {galleryItems.length} {galleryItems.length === 1 ? 'photo' : 'photos'} kept
           </p>
         </button>
@@ -287,15 +293,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <button
           type="button"
           onClick={() => onNavigate('jar')}
-          className="group text-left bg-[#FFF9EA]/70 hover:bg-[#FFF9EA] border border-[#F3BB38]/40 rounded-2xl p-4 sm:p-5 transition-colors"
+          className="group text-left bg-[var(--jar-card-bg)] backdrop-blur-md hover:opacity-95 border border-[var(--jar-card-border)] rounded-2xl p-4 sm:p-5 transition-all"
         >
-          <div className="w-9 h-9 rounded-xl bg-[#FFD45A]/75 flex items-center justify-center mb-3">
-            <Sparkles className="w-4 h-4 text-[#29253A]" />
+          <div className="w-9 h-9 rounded-xl bg-[var(--tile-jar-bg)] flex items-center justify-center mb-3">
+            <Sparkles className="w-4 h-4 text-[var(--text-primary)]" />
           </div>
-          <h2 className="font-display text-sm font-semibold text-[#29253A] group-hover:text-[#6554A4] transition-colors">
+          <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
             Compliments Jar
           </h2>
-          <p className="mt-0.5 text-xs text-[#817B90] tabular-nums">
+          <p className="mt-0.5 text-xs text-[var(--text-muted)] tabular-nums">
             {jarCount > 0 ? `${jarCount} waiting for you` : 'Pick or leave a love note'}
           </p>
         </button>
@@ -303,15 +309,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <button
           type="button"
           onClick={() => onNavigate('stickers')}
-          className="group text-left bg-white hover:bg-[#D8E9FF]/40 border border-[#6554A4]/14 rounded-2xl p-4 sm:p-5 transition-colors"
+          className="group text-left bg-[var(--bg-card)] backdrop-blur-md hover:bg-[var(--tile-stickers-hover)] border border-[var(--border-subtle)] rounded-2xl p-4 sm:p-5 transition-colors"
         >
-          <div className="w-9 h-9 rounded-xl bg-[#D8E9FF]/80 flex items-center justify-center mb-3">
-            <Sticker className="w-4 h-4 text-[#29253A]" />
+          <div className="w-9 h-9 rounded-xl bg-[var(--tile-stickers-bg)] flex items-center justify-center mb-3">
+            <Sticker className="w-4 h-4 text-[var(--text-primary)]" />
           </div>
-          <h2 className="font-display text-sm font-semibold text-[#29253A] group-hover:text-[#6554A4] transition-colors">
+          <h2 className="font-display text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
             Stickers
           </h2>
-          <p className="mt-0.5 text-xs text-[#817B90]">
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
             17 custom keepsakes
           </p>
         </button>
@@ -326,7 +332,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <div className="flex items-center justify-between">
               <h2
                 id="recent-notes-heading"
-                className="font-display text-lg font-semibold text-[#29253A]"
+                className="font-display text-lg font-semibold text-[var(--text-primary)]"
               >
                 Recent Notes
               </h2>
@@ -334,7 +340,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <button
                   type="button"
                   onClick={() => onNavigate('notes')}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-[#6554A4] hover:underline whitespace-nowrap"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-[var(--accent-primary)] hover:underline whitespace-nowrap"
                 >
                   <span>Browse all notes</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -345,12 +351,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             {loadingNotes ? (
               <NoteSkeletonList count={3} />
             ) : recentNotes.length === 0 ? (
-              <div className="bg-white border border-[#6554A4]/14 rounded-2xl p-8 text-center flex flex-col items-center">
+              <div className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-8 text-center flex flex-col items-center">
                 <CatDuoIllustration size="md" className="mb-4" />
-                <h3 className="font-display text-base font-semibold text-[#29253A]">
+                <h3 className="font-display text-base font-semibold text-[var(--text-primary)]">
                   Your shared journal is ready
                 </h3>
-                <p className="mt-1 text-sm text-[#817B90] max-w-sm">
+                <p className="mt-1 text-sm text-[var(--text-muted)] max-w-sm">
                   Write your first note above, attach a favorite snapshot, or leave a sweet
                   sunflower sticker for your partner to find.
                 </p>
@@ -375,22 +381,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
         {/* Sidebar: Memories Snapshot + Compliments Jar Invitation */}
         <aside className="lg:col-span-4 space-y-6">
-          <section className="bg-white border border-[#6554A4]/14 rounded-2xl p-5">
+          <section className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-display text-base font-semibold text-[#29253A]">
+              <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
                 Recent Memories
               </h2>
               <button
                 type="button"
                 onClick={() => onNavigate('memories')}
-                className="text-xs font-medium text-[#6554A4] hover:underline whitespace-nowrap"
+                className="text-xs font-medium text-[var(--accent-primary)] hover:underline whitespace-nowrap"
               >
                 Open gallery
               </button>
             </div>
 
             {recentGallery.length === 0 ? (
-              <p className="text-xs text-[#817B90] leading-relaxed py-4">
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed py-4">
                 Photos uploaded in Memories or attached to notes will gather here as your shared
                 keepsake wall.
               </p>
@@ -402,7 +408,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     type="button"
                     onClick={() => onOpenImage(entry.note, entry.indexInNote)}
                     aria-label={`View memory shared by ${entry.note.authorName} on ${formatNoteTimestamp(entry.note.createdAt)}`}
-                    className="group relative aspect-square rounded-xl overflow-hidden bg-[#FCFAFF] border border-[#6554A4]/10"
+                    className="group relative aspect-square rounded-xl overflow-hidden bg-[var(--bg-input)] border border-[var(--border-subtle)]"
                   >
                     <img
                       src={entry.image.secureUrl}
@@ -417,14 +423,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             )}
           </section>
 
-          <section className="bg-[#FFF9EA]/85 border border-[#F3BB38]/40 rounded-2xl p-5 space-y-3">
+          <section className="bg-[var(--jar-card-bg)] backdrop-blur-md border border-[var(--jar-card-border)] rounded-2xl p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-base font-semibold text-[#29253A]">
+              <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
                 Compliments Jar
               </h2>
-              <Sparkles className="w-4 h-4 text-[#F3BB38]" />
+              <Sparkles className="w-4 h-4 text-[var(--jar-icon)]" />
             </div>
-            <p className="text-xs text-[#817B90] leading-relaxed">
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               {jarCount > 0
                 ? `${jarCount} sweet ${jarCount === 1 ? 'note is' : 'notes are'} folded inside for you. Draw one whenever you need a smile.`
                 : 'Tuck small reminders of why you adore each other inside the jar for sunny & rainy days alike.'}
@@ -432,7 +438,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('jar')}
-              className="w-full py-2 px-3.5 rounded-xl bg-[#FFD45A] hover:bg-[#F3BB38] text-[#29253A] text-xs font-semibold transition-colors"
+              className="w-full py-2 px-3.5 rounded-xl bg-[var(--jar-btn-bg)] hover:bg-[var(--jar-btn-hover)] text-[var(--jar-btn-text)] text-xs font-semibold transition-colors"
             >
               {jarCount > 0 ? 'Pick a little note' : 'Open the jar'}
             </button>

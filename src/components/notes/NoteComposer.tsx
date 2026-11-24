@@ -20,18 +20,18 @@ interface PendingPreview {
   error?: string;
 }
 
-const TONE_OPTIONS: { id: NoteTone; label: string; swatch: string }[] = [
-  { id: 'white', label: 'Paper White', swatch: 'bg-white border-[#6554A4]/25' },
-  { id: 'lavender', label: 'Soft Lavender', swatch: 'bg-[#E9DFFF] border-[#BFA7F2]' },
-  { id: 'pink', label: 'Light Pink', swatch: 'bg-[#FFD6E7] border-[#F4A8C7]' },
-  { id: 'blue', label: 'Soft Blue', swatch: 'bg-[#D8E9FF] border-[#9EC5FA]' },
+const TONE_OPTIONS: { id: NoteTone; label: string; bgVar: string; borderVar: string }[] = [
+  { id: 'white', label: 'Paper White', bgVar: 'var(--note-white-bg)', borderVar: 'var(--border-strong)' },
+  { id: 'lavender', label: 'Soft Lavender', bgVar: 'var(--note-lavender-bg)', borderVar: 'var(--note-lavender-border)' },
+  { id: 'pink', label: 'Light Pink', bgVar: 'var(--note-pink-bg)', borderVar: 'var(--note-pink-border)' },
+  { id: 'blue', label: 'Soft Blue', bgVar: 'var(--note-blue-bg)', borderVar: 'var(--note-blue-border)' },
 ];
 
-const SURFACE_BG: Record<NoteTone, string> = {
-  white: 'bg-white',
-  lavender: 'bg-[#E9DFFF]/45',
-  pink: 'bg-[#FFD6E7]/45',
-  blue: 'bg-[#D8E9FF]/45',
+const SURFACE_STYLE: Record<NoteTone, { backgroundColor: string }> = {
+  white: { backgroundColor: 'var(--note-white-bg)' },
+  lavender: { backgroundColor: 'var(--note-lavender-bg)' },
+  pink: { backgroundColor: 'var(--note-pink-bg)' },
+  blue: { backgroundColor: 'var(--note-blue-bg)' },
 };
 
 export const NoteComposer: React.FC<NoteComposerProps> = ({
@@ -174,7 +174,8 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
   return (
     <form
       onSubmit={handleSubmit}
-      className={`border border-[#6554A4]/16 rounded-2xl p-4 sm:p-5 shadow-xs transition-colors duration-200 ${SURFACE_BG[tone]}`}
+      style={SURFACE_STYLE[tone]}
+      className="relative z-20 border border-[var(--border-subtle)] rounded-2xl p-4 sm:p-5 shadow-xs backdrop-blur-md transition-colors duration-200"
     >
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
@@ -191,7 +192,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
             placeholder="Leave a little note, thought, or memory..."
             rows={3}
             maxLength={4000}
-            className="w-full bg-transparent resize-y min-h-[76px] text-[15px] leading-relaxed text-[#29253A] placeholder:text-[#645E7B]/75 focus:outline-none"
+            className="w-full bg-transparent resize-y min-h-[76px] text-[15px] leading-relaxed text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none"
           />
         </div>
 
@@ -202,7 +203,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
               type="button"
               onClick={() => setSticker(null)}
               aria-label={`Remove ${getStickerLabel(sticker)} sticker`}
-              className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-white border border-[#6554A4]/20 shadow-xs flex items-center justify-center text-[#29253A] hover:bg-[#FFD6E7]"
+              className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-[var(--bg-card-elevated)] border border-[var(--border-strong)] shadow-xs flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--accent-soft-strong)]"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -216,7 +217,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
           {previews.map((item) => (
             <div
               key={item.localId}
-              className="relative aspect-4/3 rounded-xl overflow-hidden border border-[#6554A4]/15 bg-white"
+              className="relative aspect-4/3 rounded-xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-card)]"
             >
               <img
                 src={item.uploaded?.secureUrl || item.previewUrl}
@@ -224,7 +225,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                 className={`w-full h-full object-cover ${item.uploading ? 'opacity-60' : ''}`}
               />
               {item.uploading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/25">
                   <span className="text-xs font-medium text-white tabular-nums">
                     {uploadProgress ?? 50}%
                   </span>
@@ -245,9 +246,9 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
 
       {uploadProgress !== null && (
         <div className="mt-3">
-          <div className="h-1.5 w-full rounded-full bg-[#E9DFFF] overflow-hidden">
+          <div className="h-1.5 w-full rounded-full bg-[var(--accent-soft)] overflow-hidden">
             <div
-              className="h-full bg-[#6554A4] transition-all duration-150"
+              className="h-full bg-[var(--accent-primary)] transition-all duration-150"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -255,13 +256,13 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
       )}
 
       {errorMsg && (
-        <p className="mt-2.5 text-xs text-[#B91C1C]" role="alert">
+        <p className="mt-2.5 text-xs text-[var(--danger-text)]" role="alert">
           {errorMsg}
         </p>
       )}
 
       {/* Composer Toolbar */}
-      <div className="mt-3 pt-3 border-t border-[#6554A4]/10 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 relative">
           <input
             ref={fileInputRef}
@@ -276,9 +277,9 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
             onClick={() => fileInputRef.current?.click()}
             disabled={previews.length >= 4 || isUploadingAny}
             aria-label="Add images"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-[#29253A] hover:bg-[#6554A4]/8 transition-colors disabled:opacity-45 whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors disabled:opacity-45 whitespace-nowrap shrink-0"
           >
-            <ImagePlus className="w-4 h-4 text-[#6554A4]" />
+            <ImagePlus className="w-4 h-4 text-[var(--accent-primary)]" />
             <span>Photos</span>
           </button>
 
@@ -289,11 +290,11 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
             aria-expanded={showStickers}
             className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
               showStickers
-                ? 'bg-[#E9DFFF] text-[#29253A]'
-                : 'text-[#29253A] hover:bg-[#6554A4]/8'
+                ? 'bg-[var(--accent-soft-strong)] text-[var(--text-primary)]'
+                : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
             }`}
           >
-            <Smile className="w-4 h-4 text-[#6554A4]" />
+            <Smile className="w-4 h-4 text-[var(--accent-primary)]" />
             <span>Sticker</span>
           </button>
 
@@ -308,7 +309,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
           )}
 
           <div
-            className="flex items-center gap-1.5 pl-2 border-l border-[#6554A4]/12"
+            className="flex items-center gap-1.5 pl-2 border-l border-[var(--border-subtle)]"
             role="radiogroup"
             aria-label="Note card color"
           >
@@ -320,8 +321,11 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                 aria-checked={tone === opt.id}
                 aria-label={`${opt.label} note tone`}
                 onClick={() => setTone(opt.id)}
-                className={`w-6 h-6 rounded-full border transition-transform ${opt.swatch} ${
-                  tone === opt.id ? 'ring-2 ring-[#6554A4] ring-offset-1 scale-110' : 'hover:scale-105'
+                style={{ backgroundColor: opt.bgVar, borderColor: opt.borderVar }}
+                className={`w-6 h-6 rounded-full border transition-transform ${
+                  tone === opt.id
+                    ? 'ring-2 ring-[var(--ring-focus)] ring-offset-1 scale-110'
+                    : 'hover:scale-105'
                 }`}
               />
             ))}
@@ -331,7 +335,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#6554A4] hover:bg-[#534391] text-white text-sm font-medium transition-colors disabled:bg-[#E9DFFF] disabled:text-[#645E7B] disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors disabled:bg-[var(--accent-soft)] disabled:text-[var(--text-muted)] disabled:cursor-not-allowed whitespace-nowrap shrink-0"
         >
           <Send className="w-3.5 h-3.5" />
           <span>{submitting ? 'Posting...' : 'Post Note'}</span>

@@ -323,12 +323,12 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({
 }) => {
   return (
     <div
-      className="bg-white border border-[#6554A4]/18 rounded-2xl shadow-lg p-3 w-72 sm:w-80 z-30"
+      className="bg-[var(--bg-card-elevated)] border border-[var(--border-strong)] rounded-2xl shadow-lg p-3 w-72 sm:w-80 z-30"
       role="dialog"
       aria-label="Choose a sticker"
     >
       <div className="flex items-center justify-between mb-2 px-1">
-        <span className="text-xs font-semibold text-[#29253A]">Pick a sticker</span>
+        <span className="text-xs font-semibold text-[var(--text-primary)]">Pick a sticker</span>
         {selected && (
           <button
             type="button"
@@ -336,7 +336,7 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({
               onSelect(null);
               onClose?.();
             }}
-            className="text-xs text-[#6554A4] hover:underline whitespace-nowrap"
+            className="text-xs text-[var(--accent-primary)] hover:underline whitespace-nowrap"
           >
             Remove
           </button>
@@ -357,8 +357,8 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({
               aria-pressed={isActive}
               className={`p-1.5 rounded-xl flex items-center justify-center transition-transform duration-150 hover:scale-105 ${
                 isActive
-                  ? 'bg-[#E9DFFF] ring-2 ring-[#6554A4]'
-                  : 'hover:bg-[#FAF9FE]'
+                  ? 'bg-[var(--accent-soft-strong)] ring-2 ring-[var(--accent-primary)]'
+                  : 'hover:bg-[var(--bg-hover)]'
               }`}
             >
               <StickerArtwork sticker={item.id} className="w-10 h-10" />

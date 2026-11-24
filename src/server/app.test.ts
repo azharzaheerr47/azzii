@@ -477,6 +477,141 @@ test('Vercel serverless Express handler serves API, rewrites, JSON errors, 503 o
       },
     });
     assert.equal(azharDelRes.status, 200);
+
+    // 11. Per-user theme appearance persistence, validation, and safe image cleanup
+    const invalidCustomRes = await fetch(`${baseUrl}/api/profile/appearance`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Signup.sessionToken}`,
+      },
+      body: JSON.stringify({
+        themeMode: 'custom',
+        romanticMode: false,
+        customBackground: null,
+      }),
+    });
+    assert.equal(invalidCustomRes.status, 400);
+
+    // Upload a valid 1x1 PNG for Azhar's theme background (?purpose=theme)
+    const tinyPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    const form1 = new FormData();
+    form1.append('images', new Blob([tinyPng], { type: 'image/png' }), 'bg1.png');
+    const upload1Res = await fetch(`${baseUrl}/api/upload?purpose=theme`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Signup.sessionToken}`,
+      },
+      body: form1,
+    });
+    assert.equal(upload1Res.status, 201);
+    const upload1Json = (await upload1Res.json()) as {
+      images: Array<{ secureUrl: string; cloudinaryPublicId: string; width: number; height: number }>;
+    };
+    const bg1 = upload1Json.images[0];
+    assert.ok(bg1.cloudinaryPublicId.startsWith('local/'));
+
+    const applyBg1Res = await fetch(`${baseUrl}/api/profile/appearance`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Signup.sessionToken}`,
+      },
+      body: JSON.stringify({
+        themeMode: 'custom',
+        romanticMode: false,
+        customBackground: {
+          url: bg1.secureUrl,
+          publicId: bg1.cloudinaryPublicId,
+          position: 'center',
+          scale: 112,
+          blur: 8,
+          brightness: 82,
+          overlayOpacity: 42,
+          overlayMode: 'dark',
+        },
+      }),
+    });
+    assert.equal(applyBg1Res.status, 200);
+
+    // Deleting an actively used background photo is blocked with 409
+    const blockedDeleteRes = await fetch(`${baseUrl}/api/upload`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Signup.sessionToken}`,
+      },
+      body: JSON.stringify({ publicId: bg1.cloudinaryPublicId }),
+    });
+    assert.equal(blockedDeleteRes.status, 409);
+
+    // Sam sets Romantic Mode independently; Azhar keeps his custom theme
+    const samRomanticRes = await fetch(`${baseUrl}/api/profile/appearance`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Partner.sessionToken}`,
+      },
+      body: JSON.stringify({
+        themeMode: 'system',
+        romanticMode: true,
+        customBackground: null,
+      }),
+    });
+    assert.equal(samRomanticRes.status, 200);
+
+    const [azharCheckRes, samCheckRes] = await Promise.all([
+      fetch(`${baseUrl}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${space2Signup.sessionToken}` },
+      }),
+      fetch(`${baseUrl}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${space2Partner.sessionToken}` },
+      }),
+    ]);
+    const azharCheck = (await azharCheckRes.json()) as {
+      user: { appearance: { themeMode: string; romanticMode: boolean; customBackground: { publicId: string } | null } };
+    };
+    const samCheck = (await samCheckRes.json()) as {
+      user: { appearance: { themeMode: string; romanticMode: boolean; customBackground: unknown } };
+    };
+    assert.equal(azharCheck.user.appearance.themeMode, 'custom');
+    assert.equal(azharCheck.user.appearance.romanticMode, false);
+    assert.equal(azharCheck.user.appearance.customBackground?.publicId, bg1.cloudinaryPublicId);
+    assert.equal(samCheck.user.appearance.themeMode, 'system');
+    assert.equal(samCheck.user.appearance.romanticMode, true);
+    assert.equal(samCheck.user.appearance.customBackground, null);
+
+    // Azhar resets to default -> unreferenced local bg1 image is cleaned up
+    const localBg1File = path.resolve(
+      process.cwd(),
+      '.data',
+      'media',
+      bg1.cloudinaryPublicId.replace(/^local\//, ''),
+    );
+    assert.equal(fs.existsSync(localBg1File), true);
+    const resetThemeRes = await fetch(`${baseUrl}/api/profile/appearance`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Signup.sessionToken}`,
+      },
+      body: JSON.stringify({
+        themeMode: 'system',
+        romanticMode: false,
+        customBackground: null,
+      }),
+    });
+    assert.equal(resetThemeRes.status, 200);
+    assert.equal(fs.existsSync(localBg1File), false);
   } finally {
     fs.rmSync(TEMP_DB, { recursive: true, force: true });
     await new Promise<void>((resolve, reject) =>

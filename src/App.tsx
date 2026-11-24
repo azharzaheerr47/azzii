@@ -15,7 +15,8 @@ import type {
 import { api, ApiRequestError } from './utils/apiClient';
 import { useRealtimeSync } from './hooks/useRealtimeSync';
 import { SunflowerBloomIntro } from './components/artwork/SunflowerIllustration';
-import { AppShell, type AppRoute, type AppearanceTheme } from './components/layout/AppShell';
+import { AppShell, type AppRoute } from './components/layout/AppShell';
+import { ThemeProvider, useTheme } from './components/theme/ThemeProvider';
 import { ImageLightbox, type LightboxImageItem } from './components/ui/ImageLightbox';
 import { PageSkeleton } from './components/ui/SkeletonLoaders';
 import { ToastProvider, useToast } from './components/ui/ToastProvider';
@@ -78,18 +79,18 @@ class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#FCFAFF] flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-white border border-[#6554A4]/20 rounded-2xl p-6 text-center">
-            <h1 className="font-display text-xl font-bold text-[#29253A]">
+        <div className="min-h-screen bg-[var(--bg-canvas)] flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl p-6 text-center">
+            <h1 className="font-display text-xl font-bold text-[var(--text-primary)]">
               Something went sideways
             </h1>
-            <p className="mt-2 text-sm text-[#817B90]">
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
               {this.state.message || 'An unexpected display error occurred.'}
             </p>
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-5 px-4 py-2 rounded-xl bg-[#6554A4] text-white text-sm font-medium"
+              className="mt-5 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors"
             >
               Reload space
             </button>
@@ -103,6 +104,7 @@ class ErrorBoundary extends Component<
 
 function InnerApp() {
   const { showToast } = useToast();
+  const { syncFromUser } = useTheme();
   const [route, setRoute] = useState<RoutePath>(() =>
     parsePathToRoute(window.location.pathname),
   );
@@ -131,24 +133,6 @@ function InnerApp() {
 
   // Signature Sunflower Bloom Intro (runs once per interactive sign-in / sign-up)
   const [showBloomIntro, setShowBloomIntro] = useState(false);
-
-  // Appearance preference (Soft Lavender vs Sunflower Cream)
-  const [appearance, setAppearance] = useState<AppearanceTheme>(() => {
-    try {
-      return window.localStorage.getItem('ols_appearance') === 'cream' ? 'cream' : 'lavender';
-    } catch {
-      return 'lavender';
-    }
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-appearance', appearance);
-    try {
-      window.localStorage.setItem('ols_appearance', appearance);
-    } catch {
-      // ignore storage failures
-    }
-  }, [appearance]);
 
   // Lightbox state
   const [lightboxItems, setLightboxItems] = useState<LightboxImageItem[]>([]);
@@ -192,6 +176,7 @@ function InnerApp() {
   const loadAuthenticatedSpace = useCallback(async (options?: { silent?: boolean }) => {
     const me = await api.getMe();
     setUser(me.user);
+    syncFromUser(me.user);
     setMembers(me.members);
     setSpace(me.space);
     setStatus(me.status);
@@ -208,7 +193,7 @@ function InnerApp() {
     } finally {
       if (!options?.silent) setLoadingNotes(false);
     }
-  }, []);
+  }, [syncFromUser]);
 
   const runBootCheck = useCallback(
     async (isCancelled?: () => boolean) => {
@@ -232,6 +217,7 @@ function InnerApp() {
           }
         } else if (!isCancelled?.()) {
           setUser(null);
+          syncFromUser(null);
         }
       } catch (err) {
         if (isCancelled?.()) return;
@@ -261,7 +247,7 @@ function InnerApp() {
         if (!isCancelled?.()) setBootLoading(false);
       }
     },
-    [loadAuthenticatedSpace, navigate],
+    [loadAuthenticatedSpace, navigate, syncFromUser],
   );
 
   useEffect(() => {
@@ -357,6 +343,7 @@ function InnerApp() {
   const handleLogout = async () => {
     await api.logout().catch(() => undefined);
     setUser(null);
+    syncFromUser(null);
     setNotes([]);
     setComplimentsSummary(null);
     setInitialInviteCode(null);
@@ -410,21 +397,21 @@ function InnerApp() {
 
   if (bootError || !status) {
     return (
-      <div className="min-h-screen bg-[#FCFAFF] flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white border border-[#6554A4]/20 rounded-2xl p-6 text-center">
-          <h1 className="font-display text-lg font-bold text-[#29253A]">
+      <div className="min-h-screen bg-[var(--bg-canvas)] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl p-6 text-center">
+          <h1 className="font-display text-lg font-bold text-[var(--text-primary)]">
             {bootError?.title || 'Could not connect to Our Little Space'}
           </h1>
-          <p className="mt-2 text-sm text-[#817B90]">
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
             {bootError?.message || 'Unable to load application status.'}
           </p>
           {bootError?.detail && (
-            <p className="mt-2 text-xs text-[#817B90]/80 font-mono">{bootError.detail}</p>
+            <p className="mt-2 text-xs text-[var(--text-muted)] font-mono">{bootError.detail}</p>
           )}
           <button
             type="button"
             onClick={() => runBootCheck()}
-            className="mt-5 px-4 py-2 rounded-xl bg-[#6554A4] hover:bg-[#534391] text-white text-sm font-medium transition-colors"
+            className="mt-5 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-medium transition-colors"
           >
             Try again
           </button>
@@ -471,7 +458,6 @@ function InnerApp() {
         user={user}
         members={members}
         onlineUserIds={onlineUserIds}
-        appearance={appearance}
         onLogout={handleLogout}
       >
         {route === 'dashboard' && (
@@ -541,8 +527,6 @@ function InnerApp() {
             members={members}
             space={space}
             status={status}
-            appearance={appearance}
-            onChangeAppearance={setAppearance}
             onSpaceUpdated={setSpace}
             onUserUpdated={(updated) => {
               setUser(updated);
@@ -571,7 +555,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <InnerApp />
+        <ThemeProvider>
+          <InnerApp />
+        </ThemeProvider>
       </ToastProvider>
     </ErrorBoundary>
   );

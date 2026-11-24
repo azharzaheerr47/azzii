@@ -19,18 +19,30 @@ interface NoteCardProps {
   onOpenImage: (note: SharedNote, imageIndex: number) => void;
 }
 
-const CARD_TONE_CLASSES: Record<NoteTone, string> = {
-  white: 'bg-white border-[#6554A4]/14',
-  lavender: 'bg-[#E9DFFF]/55 border-[#BFA7F2]/60',
-  pink: 'bg-[#FFD6E7]/55 border-[#F4A8C7]/60',
-  blue: 'bg-[#D8E9FF]/55 border-[#9EC5FA]/60',
+const CARD_TONE_STYLES: Record<NoteTone, { backgroundColor: string; borderColor: string }> = {
+  white: {
+    backgroundColor: 'var(--note-white-bg)',
+    borderColor: 'var(--note-white-border)',
+  },
+  lavender: {
+    backgroundColor: 'var(--note-lavender-bg)',
+    borderColor: 'var(--note-lavender-border)',
+  },
+  pink: {
+    backgroundColor: 'var(--note-pink-bg)',
+    borderColor: 'var(--note-pink-border)',
+  },
+  blue: {
+    backgroundColor: 'var(--note-blue-bg)',
+    borderColor: 'var(--note-blue-border)',
+  },
 };
 
-const TONE_SWATCHES: { id: NoteTone; label: string; bg: string }[] = [
-  { id: 'white', label: 'White', bg: 'bg-white' },
-  { id: 'lavender', label: 'Lavender', bg: 'bg-[#E9DFFF]' },
-  { id: 'pink', label: 'Pink', bg: 'bg-[#FFD6E7]' },
-  { id: 'blue', label: 'Blue', bg: 'bg-[#D8E9FF]' },
+const TONE_SWATCHES: { id: NoteTone; label: string; bgVar: string }[] = [
+  { id: 'white', label: 'White', bgVar: 'var(--note-white-bg)' },
+  { id: 'lavender', label: 'Lavender', bgVar: 'var(--note-lavender-bg)' },
+  { id: 'pink', label: 'Pink', bgVar: 'var(--note-pink-bg)' },
+  { id: 'blue', label: 'Blue', bgVar: 'var(--note-blue-bg)' },
 ];
 
 export const NoteCard: React.FC<NoteCardProps> = ({
@@ -56,12 +68,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   if (note.isDeleted) {
     return (
       <article
-        className="bg-[#FAF9FE] border border-dashed border-[#6554A4]/20 rounded-2xl px-4 py-3.5 text-sm text-[#645E7B]"
+        className="bg-[var(--bg-surface)] backdrop-blur-md border border-dashed border-[var(--border-strong)] rounded-2xl px-4 py-3.5 text-sm text-[var(--text-secondary)]"
         aria-label={`Deleted note by ${note.authorName}`}
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="italic text-[#645E7B]">This note was deleted by its author.</p>
-          <span className="text-xs tabular-nums text-[#645E7B]/85">
+          <p className="italic text-[var(--text-secondary)]">This note was deleted by its author.</p>
+          <span className="text-xs tabular-nums text-[var(--text-muted)]">
             {note.authorName}
             {note.deletedAt ? ` · Deleted ${formatNoteTimestamp(note.deletedAt)}` : ''}
           </span>
@@ -118,6 +130,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const createdLabel = formatNoteTimestamp(note.createdAt);
   const editedLabel = note.updatedAt ? formatNoteTimestamp(note.updatedAt) : null;
+  const toneStyle = CARD_TONE_STYLES[note.tone] ?? CARD_TONE_STYLES.white;
 
   return (
     <>
@@ -126,7 +139,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.18 }}
-        className={`border rounded-2xl p-4 sm:p-5 transition-shadow duration-150 hover:shadow-sm ${CARD_TONE_CLASSES[note.tone]}`}
+        style={toneStyle}
+        className={`relative ${
+          editing ? 'z-20' : ''
+        } border rounded-2xl p-4 sm:p-5 backdrop-blur-md transition-[shadow,background-color,border-color] duration-200 hover:shadow-sm`}
       >
         {/* Header Metadata (Zero-Pill clean unboxed typography) */}
         <div className="flex items-start justify-between gap-3">
@@ -140,23 +156,25 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-1.5 text-sm">
-                <span className="font-semibold text-[#29253A] truncate">{note.authorName}</span>
-                <span aria-hidden="true" className="text-[#645E7B]/60">
+                <span className="font-semibold text-[var(--text-primary)] truncate">
+                  {note.authorName}
+                </span>
+                <span aria-hidden="true" className="text-[var(--text-muted)]">
                   ·
                 </span>
                 <time
                   dateTime={note.createdAt}
-                  className="text-xs text-[#645E7B] tabular-nums"
+                  className="text-xs text-[var(--text-secondary)] tabular-nums"
                 >
                   {createdLabel}
                 </time>
                 {editedLabel && (
                   <>
-                    <span aria-hidden="true" className="text-[#645E7B]/60">
+                    <span aria-hidden="true" className="text-[var(--text-muted)]">
                       ·
                     </span>
                     <span
-                      className="text-xs font-medium text-[#6554A4]"
+                      className="text-xs font-medium text-[var(--accent-primary)]"
                       title={`Last edited ${editedLabel}`}
                     >
                       Edited
@@ -173,7 +191,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 type="button"
                 onClick={startEditing}
                 aria-label={`Edit note by ${note.authorName} from ${createdLabel}`}
-                className="p-2 rounded-xl text-[#645E7B] hover:text-[#29253A] hover:bg-black/5 transition-colors"
+                className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
               >
                 <Pencil className="w-4 h-4" />
               </button>
@@ -181,7 +199,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 type="button"
                 onClick={() => setConfirmDeleteOpen(true)}
                 aria-label={`Delete note by ${note.authorName} from ${createdLabel}`}
-                className="p-2 rounded-xl text-[#645E7B] hover:text-[#B91C1C] hover:bg-[#B91C1C]/8 transition-colors"
+                className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--danger-text)] hover:bg-[var(--danger-bg)] transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -201,16 +219,16 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               onChange={(e) => setDraftContent(e.target.value)}
               rows={3}
               maxLength={4000}
-              className="w-full bg-white/85 border border-[#6554A4]/25 rounded-xl p-3 text-[15px] leading-relaxed text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/30"
+              className="w-full bg-[var(--bg-input)] border border-[var(--border-strong)] rounded-xl p-3 text-[15px] leading-relaxed text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
             />
             <div className="flex flex-wrap items-center justify-between gap-3 relative">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowEditStickers((v) => !v)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/80 border border-[#6554A4]/15 text-xs font-medium text-[#29253A]"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--bg-input)] border border-[var(--border-subtle)] text-xs font-medium text-[var(--text-primary)]"
                 >
-                  <Smile className="w-3.5 h-3.5 text-[#6554A4]" />
+                  <Smile className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
                   <span>{draftSticker ? getStickerLabel(draftSticker) : 'Sticker'}</span>
                 </button>
                 {draftSticker && (
@@ -218,7 +236,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                     type="button"
                     onClick={() => setDraftSticker(null)}
                     aria-label="Remove sticker"
-                    className="p-1 rounded-lg text-[#645E7B] hover:text-[#29253A]"
+                    className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -232,15 +250,16 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                     />
                   </div>
                 )}
-                <div className="flex items-center gap-1 pl-2 border-l border-[#6554A4]/15">
+                <div className="flex items-center gap-1 pl-2 border-l border-[var(--border-subtle)]">
                   {TONE_SWATCHES.map((sw) => (
                     <button
                       key={sw.id}
                       type="button"
                       onClick={() => setDraftTone(sw.id)}
                       aria-label={`Set note tone to ${sw.label}`}
-                      className={`w-5 h-5 rounded-full border border-[#6554A4]/25 ${sw.bg} ${
-                        draftTone === sw.id ? 'ring-2 ring-[#6554A4]' : ''
+                      style={{ backgroundColor: sw.bgVar }}
+                      className={`w-5 h-5 rounded-full border border-[var(--border-strong)] ${
+                        draftTone === sw.id ? 'ring-2 ring-[var(--ring-focus)]' : ''
                       }`}
                     />
                   ))}
@@ -255,14 +274,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                     setEditing(false);
                     setShowEditStickers(false);
                   }}
-                  className="px-3 py-1.5 rounded-xl text-xs font-medium text-[#645E7B] hover:bg-black/5 whitespace-nowrap"
+                  className="px-3 py-1.5 rounded-xl text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] whitespace-nowrap"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#6554A4] text-white text-xs font-medium hover:bg-[#534391] disabled:opacity-60 whitespace-nowrap"
+                  className="px-3.5 py-1.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-medium disabled:opacity-60 whitespace-nowrap"
                 >
                   {saving ? 'Saving...' : 'Save changes'}
                 </button>
@@ -273,7 +292,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           <div className="mt-3 flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               {note.content && (
-                <p className="text-[15px] leading-relaxed text-[#29253A] whitespace-pre-wrap break-words">
+                <p className="text-[15px] leading-relaxed text-[var(--text-primary)] whitespace-pre-wrap break-words">
                   {note.content}
                 </p>
               )}
@@ -303,7 +322,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 type="button"
                 onClick={() => onOpenImage(note, index)}
                 aria-label={`Open image ${index + 1} from ${note.authorName}'s note`}
-                className={`group relative overflow-hidden rounded-xl border border-[#6554A4]/12 bg-[#FAF9FE] block text-left ${
+                className={`group relative overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] block text-left ${
                   note.images.length === 1 ? 'aspect-16/10 max-h-72 w-full sm:max-w-lg' : 'aspect-4/3'
                 }`}
               >

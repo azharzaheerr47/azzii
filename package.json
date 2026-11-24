@@ -11,7 +11,7 @@
     "clean": "rm -rf dist server.js api/index.js",
     "lint": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
-    "test": "tsx --test src/lib/noteLogic.test.ts src/lib/inviteLink.test.ts src/lib/complimentLogic.test.ts src/server/auth/crypto.test.ts src/server/app.test.ts"
+    "test": "tsx --test src/lib/noteLogic.test.ts src/lib/inviteLink.test.ts src/lib/complimentLogic.test.ts src/lib/themeLogic.test.ts src/server/auth/crypto.test.ts src/server/app.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

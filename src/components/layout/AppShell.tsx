@@ -3,9 +3,9 @@ import { BookOpen, Home, Images, LogOut, Settings, Sparkles, Sticker } from 'luc
 import type { PublicUser, SpaceSettings } from '../../types/index';
 import { SpaceBrandMark } from '../artwork/CatDuoIllustration';
 import { PartnerAvatar } from '../artwork/PartnerAvatar';
+import { useTheme } from '../theme/ThemeProvider';
 
 export type AppRoute = 'dashboard' | 'notes' | 'memories' | 'jar' | 'stickers' | 'settings';
-export type AppearanceTheme = 'lavender' | 'cream';
 
 interface AppShellProps {
   currentRoute: AppRoute;
@@ -14,7 +14,6 @@ interface AppShellProps {
   user: PublicUser;
   members: PublicUser[];
   onlineUserIds: string[];
-  appearance: AppearanceTheme;
   onLogout: () => void;
   children: React.ReactNode;
 }
@@ -38,16 +37,18 @@ export const AppShell: React.FC<AppShellProps> = ({
   user,
   members,
   onlineUserIds,
-  appearance,
   onLogout,
   children,
 }) => {
-  const rootBg = appearance === 'cream' ? 'bg-[#FFFDF6]' : 'bg-[#FCFAFF]';
+  const { effectiveTheme } = useTheme();
+  const rootBg = effectiveTheme === 'custom' ? 'bg-transparent' : 'bg-[var(--bg-canvas)]';
 
   return (
-    <div className={`min-h-screen ${rootBg} flex flex-col pb-20 md:pb-0 transition-colors duration-200`}>
+    <div
+      className={`min-h-screen ${rootBg} text-[var(--text-primary)] flex flex-col pb-20 md:pb-0 transition-colors duration-300`}
+    >
       {/* Strict 3-Zone Top Bar Contract */}
-      <header className="sticky top-0 z-30 bg-white/92 backdrop-blur-md border-b border-[#6554A4]/12">
+      <header className="sticky top-0 z-30 bg-[var(--bg-nav)] backdrop-blur-md border-b border-[var(--border-subtle)] transition-colors duration-300">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4 sm:gap-8">
           {/* Zone 1: Brand mark + single-line Space Name */}
           <button
@@ -56,7 +57,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             className="flex items-center gap-2.5 text-left whitespace-nowrap shrink-0 group"
           >
             <SpaceBrandMark style={space.logoStyle} className="w-8 h-8 shrink-0" />
-            <span className="font-display text-base sm:text-lg font-bold tracking-tight text-[#29253A] group-hover:text-[#6554A4] transition-colors truncate max-w-[145px] sm:max-w-[210px]">
+            <span className="font-display text-base sm:text-lg font-bold tracking-tight text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors truncate max-w-[145px] sm:max-w-[210px]">
               {space.spaceName}
             </span>
           </button>
@@ -73,8 +74,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                   aria-current={active ? 'page' : undefined}
                   className={`py-1.5 text-sm font-medium transition-colors whitespace-nowrap shrink-0 border-b-2 ${
                     active
-                      ? 'text-[#6554A4] border-[#F3BB38]'
-                      : 'text-[#817B90] border-transparent hover:text-[#29253A]'
+                      ? 'text-[var(--nav-active-text)] border-[var(--nav-active-border)]'
+                      : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {item.label}
@@ -104,8 +105,8 @@ export const AppShell: React.FC<AppShellProps> = ({
               aria-current={currentRoute === 'settings' ? 'page' : undefined}
               className={`min-h-[40px] min-w-[40px] inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
                 currentRoute === 'settings'
-                  ? 'bg-[#E9DFFF]/75 text-[#6554A4]'
-                  : 'text-[#817B90] hover:text-[#29253A] hover:bg-[#FFF9EA]'
+                  ? 'bg-[var(--accent-soft-strong)] text-[var(--nav-active-text)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
               }`}
             >
               <Settings className="w-4 h-4" />
@@ -115,7 +116,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               type="button"
               onClick={onLogout}
               aria-label={`Sign out ${user.name}`}
-              className="min-h-[40px] inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-[#817B90] hover:text-[#29253A] hover:bg-[#E9DFFF]/45 transition-colors whitespace-nowrap shrink-0"
+              className="min-h-[40px] inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap shrink-0"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Sign out</span>
@@ -130,8 +131,8 @@ export const AppShell: React.FC<AppShellProps> = ({
       </main>
 
       {/* Editorial Footer */}
-      <footer className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 border-t border-[#6554A4]/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#817B90]">
-        <p className="font-display font-medium text-[#29253A]/75">
+      <footer className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 border-t border-[var(--border-subtle)] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
+        <p className="font-display font-medium text-[var(--text-secondary)]">
           {space.spaceName}
         </p>
         <p>A little space, a lot of memories.</p>
@@ -139,7 +140,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
       {/* Mobile Bottom Navigation (<= 15% viewport height, >= 44px touch targets) */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#6554A4]/12 px-1.5 py-1.5"
+        className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[var(--bg-nav)] backdrop-blur-md border-t border-[var(--border-subtle)] px-1.5 py-1.5 transition-colors duration-300"
         aria-label="Mobile navigation"
       >
         <div className="grid grid-cols-5 gap-1 max-w-md mx-auto">
@@ -154,8 +155,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                 aria-current={active ? 'page' : undefined}
                 className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-medium transition-colors ${
                   active
-                    ? 'text-[#6554A4] bg-[#FFF9EA] ring-1 ring-[#F3BB38]/50'
-                    : 'text-[#817B90] hover:text-[#29253A]'
+                    ? 'text-[var(--nav-active-text)] bg-[var(--accent-soft)] ring-1 ring-[var(--accent-border)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 <Icon className="w-4 h-4" />

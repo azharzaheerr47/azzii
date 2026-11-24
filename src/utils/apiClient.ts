@@ -11,6 +11,7 @@ import type {
   SpaceSettings,
   SpaceStatus,
   StickerId,
+  UserAppearance,
 } from '../types/index';
 
 const BASE_HEADERS: Record<string, string> = {
@@ -237,6 +238,12 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  updateAppearance: (payload: UserAppearance) =>
+    requestJson<{ user: PublicUser }>('/api/profile/appearance', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
   listCompliments: () => requestJson<ComplimentsOverview>('/api/compliments'),
 
   createCompliment: (payload: { content: string; category: ComplimentCategory }) =>
@@ -301,7 +308,11 @@ export const api = {
       body: JSON.stringify({ publicId }),
     }),
 
-  uploadImages: (files: File[], onProgress?: (percent: number) => void): Promise<NoteImage[]> => {
+  uploadImages: (
+    files: File[],
+    onProgress?: (percent: number) => void,
+    purpose: 'notes' | 'theme' = 'notes',
+  ): Promise<NoteImage[]> => {
     return new Promise((resolve, reject) => {
       const formData = new FormData();
       for (const file of files) {
@@ -309,7 +320,8 @@ export const api = {
       }
 
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/upload');
+      const targetUrl = purpose === 'theme' ? '/api/upload?purpose=theme' : '/api/upload';
+      xhr.open('POST', targetUrl);
       xhr.withCredentials = true;
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       if (memorySessionToken) {

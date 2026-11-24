@@ -109,10 +109,10 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[#29253A]">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">
             Memories Gallery
           </h1>
-          <p className="mt-1 text-sm text-[#817B90] tabular-nums">
+          <p className="mt-1 text-sm text-[var(--text-muted)] tabular-nums">
             {photos.length} shared {photos.length === 1 ? 'photograph' : 'photographs'} saved
             together
           </p>
@@ -121,7 +121,7 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
         <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
           {/* Interactive filter tabs */}
           <div
-            className="inline-flex items-center gap-1 p-1 bg-white border border-[#6554A4]/14 rounded-xl"
+            className="inline-flex items-center gap-1 p-1 bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-xl"
             role="group"
             aria-label="Filter memories by partner"
           >
@@ -131,8 +131,8 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
               aria-pressed={authorFilter === 'all'}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                 authorFilter === 'all'
-                  ? 'bg-[#E9DFFF]/70 text-[#29253A]'
-                  : 'text-[#817B90] hover:text-[#29253A]'
+                  ? 'bg-[var(--accent-soft-strong)] text-[var(--text-primary)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
               All photos
@@ -145,8 +145,8 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
                 aria-pressed={authorFilter === m.id}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   authorFilter === m.id
-                    ? 'bg-[#E9DFFF]/70 text-[#29253A]'
-                    : 'text-[#817B90] hover:text-[#29253A]'
+                    ? 'bg-[var(--accent-soft-strong)] text-[var(--text-primary)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 By {m.name}
@@ -157,7 +157,7 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
           <button
             type="button"
             onClick={() => setShowUploader((v) => !v)}
-            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#6554A4] hover:bg-[#534391] text-white text-xs font-semibold transition-colors whitespace-nowrap"
+            className="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-semibold transition-colors whitespace-nowrap"
           >
             <ImagePlus className="w-4 h-4" />
             <span>{showUploader ? 'Close uploader' : 'Add memory'}</span>
@@ -169,14 +169,14 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
       {showUploader && (
         <form
           onSubmit={handleSaveMemory}
-          className="bg-[#FFF9EA]/65 border border-[#F3BB38]/45 rounded-2xl p-5 space-y-4"
+          className="bg-[var(--jar-card-bg)] backdrop-blur-md border border-[var(--jar-card-border)] rounded-2xl p-5 space-y-4"
         >
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-sm font-semibold text-[#29253A]">
+              <h2 className="font-display text-sm font-semibold text-[var(--text-primary)]">
                 Save a photo memory
               </h2>
-              <p className="text-xs text-[#817B90]">
+              <p className="text-xs text-[var(--text-muted)]">
                 Upload up to 4 JPEG, PNG, or WebP snapshots with an optional caption.
               </p>
             </div>
@@ -192,9 +192,9 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
               type="button"
               disabled={uploading || pendingImages.length >= 4}
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#6554A4]/20 text-xs font-medium text-[#29253A] hover:bg-[#FCFAFF] disabled:opacity-50 whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-50 whitespace-nowrap"
             >
-              <Upload className="w-3.5 h-3.5 text-[#6554A4]" />
+              <Upload className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
               <span>{uploading ? `Uploading ${uploadProgress ?? 0}%` : 'Choose photos'}</span>
             </button>
           </div>
@@ -204,7 +204,7 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
               {pendingImages.map((img) => (
                 <div
                   key={img.id}
-                  className="relative aspect-4/3 rounded-xl overflow-hidden bg-white border border-[#6554A4]/15"
+                  className="relative aspect-4/3 rounded-xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border-subtle)]"
                 >
                   <img
                     src={img.secureUrl}
@@ -235,12 +235,12 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Write a short memory caption (optional)..."
-              className="flex-1 px-3.5 py-2 rounded-xl border border-[#6554A4]/18 bg-white text-sm text-[#29253A] focus:outline-none focus:ring-2 focus:ring-[#6554A4]/25"
+              className="flex-1 px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]/30"
             />
             <button
               type="submit"
               disabled={savingMemory || uploading || pendingImages.length === 0}
-              className="px-4 py-2 rounded-xl bg-[#6554A4] hover:bg-[#534391] text-white text-xs font-semibold disabled:opacity-50 whitespace-nowrap"
+              className="px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-xs font-semibold disabled:opacity-50 whitespace-nowrap"
             >
               {savingMemory ? 'Saving...' : 'Save to gallery'}
             </button>
@@ -249,12 +249,12 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
       )}
 
       {photos.length === 0 ? (
-        <div className="bg-white border border-[#6554A4]/14 rounded-2xl p-10 text-center flex flex-col items-center">
+        <div className="bg-[var(--bg-card)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl p-10 text-center flex flex-col items-center">
           <SunflowerAccent className="w-16 h-16 mb-3" />
-          <h2 className="font-display text-base font-semibold text-[#29253A]">
+          <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
             No memories uploaded yet
           </h2>
-          <p className="mt-1 text-sm text-[#817B90] max-w-sm">
+          <p className="mt-1 text-sm text-[var(--text-muted)] max-w-sm">
             Upload snapshots here or attach JPEG, PNG, or WebP photos to any shared note to gather
             your keepsakes together.
           </p>
@@ -271,7 +271,7 @@ export const MemoriesPage: React.FC<MemoriesPageProps> = ({
                 type="button"
                 onClick={() => onOpenImage(entry.note, entry.indexInNote)}
                 aria-label={`Open photo shared by ${entry.note.authorName} on ${timeLabel}`}
-                className={`group relative w-full break-inside-avoid rounded-2xl overflow-hidden bg-white border border-[#6554A4]/14 text-left focus-visible:ring-2 focus-visible:ring-[#6554A4] block ${fallbackAspect}`}
+                className={`group relative w-full break-inside-avoid rounded-2xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border-subtle)] text-left focus-visible:ring-2 focus-visible:ring-[var(--ring-focus)] block ${fallbackAspect}`}
               >
                 <img
                   src={entry.image.secureUrl}

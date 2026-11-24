@@ -81,9 +81,9 @@ export const SunflowerBloomIntro: React.FC<SunflowerBloomIntroProps> = ({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
       style={{
-        backgroundColor: '#FFFDF6',
+        backgroundColor: 'var(--bg-canvas)',
         backgroundImage:
-          'radial-gradient(circle at 50% 38%, #FFF9EA 0%, #FCFAFF 58%, rgba(233, 223, 255, 0.55) 100%)',
+          'radial-gradient(circle at 50% 38%, var(--bg-bloom-from) 0%, var(--bg-bloom-via) 58%, var(--bg-bloom-to) 100%)',
       }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6"
     >
@@ -217,13 +217,13 @@ export const SunflowerBloomIntro: React.FC<SunflowerBloomIntroProps> = ({
           transition={{ duration: prefersReducedMotion ? 0.01 : 0.5, delay: prefersReducedMotion ? 0 : 1.05 }}
           className="mt-2 space-y-2"
         >
-          <p className="text-xs font-medium tracking-wide uppercase text-[#817B90]">
+          <p className="text-xs font-medium tracking-wide uppercase text-[var(--text-muted)]">
             {spaceName}
           </p>
-          <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[#29253A] text-balance">
+          <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] text-balance">
             Where our little memories bloom
           </h2>
-          <p className="text-sm text-[#817B90]">
+          <p className="text-sm text-[var(--text-muted)]">
             Welcome home, {userName}.
           </p>
         </motion.div>
@@ -234,10 +234,10 @@ export const SunflowerBloomIntro: React.FC<SunflowerBloomIntroProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3, delay: prefersReducedMotion ? 0 : 0.8 }}
-          className="mt-8 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/90 border border-[#6554A4]/18 text-xs font-medium text-[#29253A] hover:bg-[#FFF9EA] transition-colors shadow-xs"
+          className="mt-8 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors shadow-xs"
         >
           <span>Enter our space</span>
-          <ArrowRight className="w-3.5 h-3.5 text-[#6554A4]" />
+          <ArrowRight className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
         </motion.button>
       </div>
     </motion.div>

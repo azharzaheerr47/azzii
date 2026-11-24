@@ -16,8 +16,10 @@ import type {
   SpaceSettings,
   SpaceStatus,
   StickerId,
+  UserAppearance,
 } from '../../types/index';
 import { selectNextCompliment } from '../../lib/complimentLogic';
+import { DEFAULT_USER_APPEARANCE, normalizeAppearance } from '../../lib/themeLogic';
 import {
   ComplimentDrawModel,
   ComplimentModel,
@@ -46,6 +48,7 @@ interface StoredUserRecord {
   avatarPreset: AvatarPreset;
   bio?: string;
   role: 'founder' | 'partner';
+  appearance?: UserAppearance;
   createdAt: string;
 }
 
@@ -201,6 +204,7 @@ function toPublicUser(u: StoredUserRecord): PublicUser {
     avatarPreset: u.avatarPreset,
     bio: u.bio || '',
     role: u.role,
+    appearance: normalizeAppearance(u.appearance),
     createdAt: u.createdAt,
   };
 }
@@ -216,6 +220,7 @@ function mongoUserToRecord(doc: IUserDoc): StoredUserRecord {
     avatarPreset: doc.avatarPreset,
     bio: doc.bio || '',
     role: doc.role,
+    appearance: normalizeAppearance(doc.appearance),
     createdAt: doc.createdAt.toISOString(),
   };
 }
@@ -435,6 +440,7 @@ export async function signupWithNewSpace(input: {
         avatar: '',
         avatarPreset: input.avatarPreset,
         role: 'founder',
+        appearance: DEFAULT_USER_APPEARANCE,
         createdAt: now,
       });
 
@@ -481,6 +487,7 @@ export async function signupWithNewSpace(input: {
     avatar: '',
     avatarPreset: input.avatarPreset,
     role: 'founder',
+    appearance: DEFAULT_USER_APPEARANCE,
     createdAt: now.toISOString(),
   };
 
@@ -543,6 +550,7 @@ export async function redeemPartnerInvite(input: {
         avatar: '',
         avatarPreset: input.avatarPreset,
         role: 'partner',
+        appearance: DEFAULT_USER_APPEARANCE,
         createdAt: now,
       });
       await ComplimentModel.updateMany(
@@ -603,6 +611,7 @@ export async function redeemPartnerInvite(input: {
     avatarPreset: input.avatarPreset,
     bio: '',
     role: 'partner',
+    appearance: DEFAULT_USER_APPEARANCE,
     createdAt: now.toISOString(),
   };
   db.users.push(newUser);
@@ -761,6 +770,87 @@ export async function changeUserPassword(
   }
   db.users[idx].passwordHash = hashPassword(newPassword);
   writeLocalDb(db);
+}
+
+export async function isImagePublicIdReferenced(
+  publicId: string,
+  ignoreUserId?: string,
+): Promise<boolean> {
+  if (!publicId) return false;
+  const mongo = await useMongo();
+  if (mongo) {
+    const [noteRef, userRef] = await Promise.all([
+      NoteModel.exists({ 'images.cloudinaryPublicId': publicId, isDeleted: false }),
+      UserModel.exists({
+        ...(ignoreUserId ? { _id: { $ne: ignoreUserId } } : {}),
+        'appearance.customBackground.publicId': publicId,
+      }),
+    ]);
+    return Boolean(noteRef || userRef);
+  }
+
+  const db = readLocalDb();
+  const inNotes = db.notes.some(
+    (n) => !n.isDeleted && n.images.some((img) => img.cloudinaryPublicId === publicId),
+  );
+  if (inNotes) return true;
+  return db.users.some(
+    (u) => u.id !== ignoreUserId && u.appearance?.customBackground?.publicId === publicId,
+  );
+}
+
+export async function updateUserAppearance(
+  userId: string,
+  rawAppearance: UserAppearance,
+): Promise<PublicUser> {
+  const nextAppearance = normalizeAppearance(rawAppearance);
+  const mongo = await useMongo();
+
+  if (mongo) {
+    const currentUser = await UserModel.findById(userId);
+    if (!currentUser) throw new Error('NOT_FOUND');
+
+    const prevPublicId = currentUser.appearance?.customBackground?.publicId || '';
+    const nextPublicId = nextAppearance.customBackground?.publicId || '';
+
+    const updated = await UserModel.findByIdAndUpdate(
+      userId,
+      { $set: { appearance: nextAppearance } },
+      { new: true },
+    );
+    if (!updated) throw new Error('NOT_FOUND');
+
+    if (prevPublicId && prevPublicId !== nextPublicId) {
+      const stillReferenced = await isImagePublicIdReferenced(prevPublicId, userId);
+      if (!stillReferenced) {
+        await deleteStoredImage(prevPublicId);
+      }
+    }
+
+    return toPublicUser(mongoUserToRecord(updated));
+  }
+
+  const db = readLocalDb();
+  const idx = db.users.findIndex((u) => u.id === userId);
+  if (idx === -1) throw new Error('NOT_FOUND');
+
+  const prevPublicId = db.users[idx].appearance?.customBackground?.publicId || '';
+  const nextPublicId = nextAppearance.customBackground?.publicId || '';
+
+  db.users[idx] = {
+    ...db.users[idx],
+    appearance: nextAppearance,
+  };
+  writeLocalDb(db);
+
+  if (prevPublicId && prevPublicId !== nextPublicId) {
+    const stillReferenced = await isImagePublicIdReferenced(prevPublicId, userId);
+    if (!stillReferenced) {
+      await deleteStoredImage(prevPublicId);
+    }
+  }
+
+  return toPublicUser(db.users[idx]);
 }
 
 export async function getSpaceSettings(spaceId: string): Promise<SpaceSettings> {

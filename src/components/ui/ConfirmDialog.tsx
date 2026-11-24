@@ -41,7 +41,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#29253A]/35 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--backdrop-scrim)] backdrop-blur-[2px]"
           onClick={() => !busy && onCancel()}
         >
           <motion.div
@@ -52,22 +52,22 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="confirm-dialog-title"
-            className="w-full max-w-md bg-white border border-[#6554A4]/15 rounded-2xl shadow-xl p-6"
+            className="w-full max-w-md bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] rounded-2xl shadow-xl p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <h2
               id="confirm-dialog-title"
-              className="font-display text-lg font-semibold text-[#29253A]"
+              className="font-display text-lg font-semibold text-[var(--text-primary)]"
             >
               {title}
             </h2>
-            <p className="mt-2 text-sm text-[#645E7B] leading-relaxed">{description}</p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">{description}</p>
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 type="button"
                 disabled={busy}
                 onClick={onCancel}
-                className="px-4 py-2 text-sm font-medium rounded-xl border border-[#6554A4]/20 text-[#29253A] hover:bg-[#FAF9FE] transition-colors whitespace-nowrap shrink-0"
+                className="px-4 py-2 text-sm font-medium rounded-xl border border-[var(--border-strong)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors whitespace-nowrap shrink-0"
               >
                 {cancelLabel}
               </button>
@@ -75,10 +75,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 type="button"
                 disabled={busy}
                 onClick={onConfirm}
-                className={`px-4 py-2 text-sm font-medium rounded-xl text-white transition-colors whitespace-nowrap shrink-0 disabled:opacity-60 ${
+                className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors whitespace-nowrap shrink-0 disabled:opacity-60 ${
                   isDanger
-                    ? 'bg-[#B91C1C] hover:bg-[#991B1B]'
-                    : 'bg-[#6554A4] hover:bg-[#54448F]'
+                    ? 'bg-[var(--danger-btn)] hover:bg-[var(--danger-btn-hover)] text-white'
+                    : 'bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)]'
                 }`}
               >
                 {busy ? 'Working...' : confirmLabel}

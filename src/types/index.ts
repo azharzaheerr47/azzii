@@ -21,6 +21,28 @@ export type StickerId =
 
 export type AvatarPreset = 'bat-cat' | 'bow-cat' | 'lavender' | 'blush' | 'sky';
 
+export type ThemeMode = 'system' | 'dark' | 'light' | 'custom';
+export type EffectiveTheme = 'light' | 'dark' | 'custom' | 'romantic';
+export type BackgroundPosition = 'center' | 'top' | 'bottom' | 'left' | 'right';
+export type OverlayMode = 'dark' | 'light';
+
+export interface CustomBackgroundConfig {
+  url: string;
+  publicId: string;
+  position: BackgroundPosition;
+  scale: number;
+  blur: number;
+  brightness: number;
+  overlayOpacity: number;
+  overlayMode: OverlayMode;
+}
+
+export interface UserAppearance {
+  themeMode: ThemeMode;
+  romanticMode: boolean;
+  customBackground: CustomBackgroundConfig | null;
+}
+
 export interface PublicUser {
   id: string;
   spaceId: string;
@@ -30,6 +52,7 @@ export interface PublicUser {
   avatarPreset: AvatarPreset;
   bio?: string;
   role: 'founder' | 'partner';
+  appearance?: UserAppearance;
   createdAt: string;
 }
 

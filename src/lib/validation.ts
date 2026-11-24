@@ -117,3 +117,37 @@ export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
   newPassword: z.string().min(8, 'New password must be at least 8 characters').max(100),
 });
+
+export const THEME_MODES = ['system', 'dark', 'light', 'custom'] as const;
+export const BACKGROUND_POSITIONS = ['center', 'top', 'bottom', 'left', 'right'] as const;
+export const OVERLAY_MODES = ['dark', 'light'] as const;
+
+export const customBackgroundSchema = z.object({
+  url: z
+    .string()
+    .trim()
+    .min(1, 'Background image URL is required')
+    .max(1000)
+    .refine(
+      (val) => val.startsWith('https://') || val.startsWith('/api/media/'),
+      'Invalid background image URL.',
+    ),
+  publicId: z.string().trim().max(240).default(''),
+  position: z.enum(BACKGROUND_POSITIONS).default('center'),
+  scale: z.number().min(100).max(150).default(100),
+  blur: z.number().min(0).max(24).default(0),
+  brightness: z.number().min(40).max(130).default(95),
+  overlayOpacity: z.number().min(15).max(85).default(45),
+  overlayMode: z.enum(OVERLAY_MODES).default('dark'),
+});
+
+export const updateAppearanceSchema = z
+  .object({
+    themeMode: z.enum(THEME_MODES),
+    romanticMode: z.boolean().default(false),
+    customBackground: customBackgroundSchema.nullable().default(null),
+  })
+  .refine(
+    (data) => data.themeMode !== 'custom' || (data.customBackground !== null && Boolean(data.customBackground.url)),
+    { message: 'Upload or select a photo before activating Custom Photo theme.' },
+  );

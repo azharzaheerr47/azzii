@@ -129,6 +129,7 @@ export function validateUploadedImage(
 export async function storeImageBuffer(
   buffer: Buffer,
   mimetype: string,
+  folder: 'our-little-space/notes' | 'our-little-space/themes' = 'our-little-space/notes',
 ): Promise<NoteImage> {
   const { format, width, height } = validateUploadedImage(buffer, mimetype);
   const id = crypto.randomUUID();
@@ -145,7 +146,7 @@ export async function storeImageBuffer(
     }>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
-          folder: 'our-little-space/notes',
+          folder,
           resource_type: 'image',
           allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
         },
