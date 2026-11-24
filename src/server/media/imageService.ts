@@ -12,21 +12,78 @@ const LOCAL_MEDIA_DIR =
     ? path.resolve(os.tmpdir(), '.data', 'media')
     : path.resolve(process.cwd(), '.data', 'media');
 
+function cleanEnvVal(raw: string | undefined): string {
+  return (raw || '').trim().replace(/^["']|["']$/g, '');
+}
+
+function resolveCloudinaryCredentials(): {
+  cloudName: string;
+  apiKey: string;
+  apiSecret: string;
+} | null {
+  const cloudName = cleanEnvVal(process.env.CLOUDINARY_CLOUD_NAME);
+  const apiKey = cleanEnvVal(process.env.CLOUDINARY_API_KEY);
+  const apiSecret = cleanEnvVal(process.env.CLOUDINARY_API_SECRET);
+  if (cloudName && apiKey && apiSecret) {
+    return { cloudName, apiKey, apiSecret };
+  }
+
+  const rawUrl = cleanEnvVal(process.env.CLOUDINARY_URL);
+  if (rawUrl.startsWith('cloudinary://')) {
+    try {
+      const parsed = new URL(rawUrl);
+      const uName = decodeURIComponent(parsed.hostname || '');
+      const uKey = decodeURIComponent(parsed.username || '');
+      const uSecret = decodeURIComponent(parsed.password || '');
+      if (uName && uKey && uSecret) {
+        return { cloudName: uName, apiKey: uKey, apiSecret: uSecret };
+      }
+    } catch {
+      // Invalid CLOUDINARY_URL format
+    }
+  }
+  return null;
+}
+
 export function isCloudinaryConfigured(): boolean {
-  return Boolean(
-    process.env.CLOUDINARY_CLOUD_NAME?.trim() &&
-      process.env.CLOUDINARY_API_KEY?.trim() &&
-      process.env.CLOUDINARY_API_SECRET?.trim(),
-  );
+  return resolveCloudinaryCredentials() !== null;
 }
 
 function configureCloudinary(): void {
+  const creds = resolveCloudinaryCredentials();
+  if (!creds) return;
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: creds.cloudName,
+    api_key: creds.apiKey,
+    api_secret: creds.apiSecret,
     secure: true,
   });
+}
+
+export class ImageUploadValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ImageUploadValidationError';
+  }
+}
+
+export class ImageStorageError extends Error {
+  readonly statusCode: number;
+  constructor(message: string, statusCode = 502) {
+    super(message);
+    this.name = 'ImageStorageError';
+    this.statusCode = statusCode;
+  }
+}
+
+function extractCloudinaryErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (err && typeof err === 'object') {
+    const obj = err as { error?: { message?: string }; message?: string };
+    if (obj.error?.message) return obj.error.message;
+    if (obj.message) return obj.message;
+  }
+  return 'Cloudinary image upload failed.';
 }
 
 function detectImageFormatFromMagicBytes(buf: Buffer): 'jpeg' | 'png' | 'webp' | null {
@@ -109,14 +166,16 @@ export function validateUploadedImage(
   mimetype: string,
 ): { format: 'jpeg' | 'png' | 'webp'; width: number; height: number } {
   if (!ALLOWED_MIME_TYPES.has(mimetype.toLowerCase())) {
-    throw new Error('Only JPEG, PNG, and WebP images are allowed.');
+    throw new ImageUploadValidationError('Only JPEG, PNG, and WebP images are allowed.');
   }
   if (buffer.length === 0 || buffer.length > MAX_IMAGE_BYTES) {
-    throw new Error('Image size must be between 1 byte and 5 MB.');
+    throw new ImageUploadValidationError('Image size must be between 1 byte and 5 MB.');
   }
   const detected = detectImageFormatFromMagicBytes(buffer);
   if (!detected) {
-    throw new Error('Invalid image file contents. Please upload a real JPEG, PNG, or WebP file.');
+    throw new ImageUploadValidationError(
+      'Invalid image file contents. Please upload a real JPEG, PNG, or WebP file.',
+    );
   }
   const dims = parseImageDimensions(buffer, detected);
   return {
@@ -137,39 +196,57 @@ export async function storeImageBuffer(
 
   if (isCloudinaryConfigured()) {
     configureCloudinary();
-    const result = await new Promise<{
-      public_id: string;
-      secure_url: string;
-      width: number;
-      height: number;
-      format: string;
-    }>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder,
-          resource_type: 'image',
-          allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-        },
-        (error, res) => {
-          if (error || !res) {
-            reject(error || new Error('Cloudinary upload failed'));
-            return;
-          }
-          resolve(res);
-        },
-      );
-      stream.end(buffer);
-    });
+    try {
+      const result = await new Promise<{
+        public_id: string;
+        secure_url: string;
+        width: number;
+        height: number;
+        format: string;
+      }>((resolve, reject) => {
+        let settled = false;
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder,
+            resource_type: 'image',
+            allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+            timeout: 15000,
+          },
+          (error, res) => {
+            if (settled) return;
+            settled = true;
+            if (error || !res) {
+              reject(error || new Error('Cloudinary upload failed'));
+              return;
+            }
+            resolve(res);
+          },
+        );
+        stream.on('error', (streamErr) => {
+          if (settled) return;
+          settled = true;
+          reject(streamErr);
+        });
+        stream.end(buffer);
+      });
 
-    return {
-      id,
-      cloudinaryPublicId: result.public_id,
-      secureUrl: result.secure_url,
-      width: result.width || width,
-      height: result.height || height,
-      format: result.format || format,
-      uploadedAt,
-    };
+      return {
+        id,
+        cloudinaryPublicId: result.public_id,
+        secureUrl: result.secure_url,
+        width: result.width || width,
+        height: result.height || height,
+        format: result.format || format,
+        uploadedAt,
+      };
+    } catch (err) {
+      const msg = extractCloudinaryErrorMessage(err);
+      console.error('[cloudinary-upload-error]', { folder, message: msg });
+      throw new ImageStorageError(
+        'Could not store image on media server. Please verify Cloudinary configuration or try a smaller image.',
+        502,
+      );
+    }
   }
 
   // Local preview storage fallback (strictly confined to .data/media with UUID filename)

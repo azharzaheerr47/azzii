@@ -89,6 +89,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   const [savingAppearance, setSavingAppearance] = useState(false);
   const [heartBurstId, setHeartBurstId] = useState(0);
   const isAuthenticatedRef = useRef(false);
+  const savingAppearanceRef = useRef(false);
+  const lastSavedAtRef = useRef(0);
 
   // Listen to operating system dark/light preference changes dynamically
   useEffect(() => {
@@ -148,6 +150,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
       return;
     }
     isAuthenticatedRef.current = true;
+    // Do not let background polling revert an active or just-saved local theme change
+    if (savingAppearanceRef.current || Date.now() - lastSavedAtRef.current < 4000) {
+      return;
+    }
     const normalized = normalizeAppearance(user.appearance);
     setAppearance(normalized);
     writeThemeCache(normalized);
@@ -172,10 +178,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
         return null;
       }
 
+      savingAppearanceRef.current = true;
       setSavingAppearance(true);
       try {
         const res = await api.updateAppearance(next);
         const persisted = normalizeAppearance(res.user.appearance);
+        lastSavedAtRef.current = Date.now();
         setAppearance(persisted);
         writeThemeCache(persisted);
         onUserAppearanceUpdated?.(res.user);
@@ -192,6 +200,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
         );
         return null;
       } finally {
+        savingAppearanceRef.current = false;
         setSavingAppearance(false);
       }
     },

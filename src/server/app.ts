@@ -72,12 +72,23 @@ export function createApp(): Express {
     }
 
     if (err instanceof DatabaseConnectionError) {
+      console.error('[server-db-error]', {
+        method: req.method,
+        path: req.originalUrl || req.path,
+        status: 503,
+        code: err.code,
+      });
       res.status(503).json({ error: err.message });
       return;
     }
 
     const safeName = err instanceof Error ? err.name : 'UnknownError';
-    console.error('[server-error]', { method: req.method, path: req.path, name: safeName });
+    console.error('[server-error]', {
+      method: req.method,
+      path: req.originalUrl || req.path,
+      status: 500,
+      name: safeName,
+    });
     res.status(500).json({ error: 'Unexpected server error. Please try again.' });
   });
 

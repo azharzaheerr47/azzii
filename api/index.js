@@ -153,11 +153,25 @@ var DatabaseConnectionError = class extends Error {
     this.code = code;
   }
 };
+var listenersAttached = false;
 async function connectMongoDB(uri) {
   if (!globalWithMongoose.__mongooseCache) {
     globalWithMongoose.__mongooseCache = { conn: null, promise: null };
   }
   const cache = globalWithMongoose.__mongooseCache;
+  if (!listenersAttached) {
+    listenersAttached = true;
+    mongoose.connection.on("disconnected", () => {
+      cache.conn = null;
+      cache.promise = null;
+    });
+    mongoose.connection.on("error", (err) => {
+      cache.conn = null;
+      cache.promise = null;
+      const safeName = err instanceof Error ? err.name : "MongoError";
+      console.error("[mongodb] Connection error event:", safeName);
+    });
+  }
   if (cache.conn && mongoose.connection.readyState === 1) {
     return cache.conn;
   }
@@ -170,7 +184,9 @@ async function connectMongoDB(uri) {
       bufferCommands: false,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5e3,
-      connectTimeoutMS: 5e3
+      connectTimeoutMS: 5e3,
+      socketTimeoutMS: 8e3,
+      maxIdleTimeMS: 3e4
     }).catch((err) => {
       cache.conn = null;
       cache.promise = null;
@@ -589,18 +605,65 @@ import { v2 as cloudinary } from "cloudinary";
 var ALLOWED_MIME_TYPES = /* @__PURE__ */ new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
 var MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 var LOCAL_MEDIA_DIR = process.env.VERCEL === "1" ? path.resolve(os.tmpdir(), ".data", "media") : path.resolve(process.cwd(), ".data", "media");
+function cleanEnvVal(raw) {
+  return (raw || "").trim().replace(/^["']|["']$/g, "");
+}
+function resolveCloudinaryCredentials() {
+  const cloudName = cleanEnvVal(process.env.CLOUDINARY_CLOUD_NAME);
+  const apiKey = cleanEnvVal(process.env.CLOUDINARY_API_KEY);
+  const apiSecret = cleanEnvVal(process.env.CLOUDINARY_API_SECRET);
+  if (cloudName && apiKey && apiSecret) {
+    return { cloudName, apiKey, apiSecret };
+  }
+  const rawUrl = cleanEnvVal(process.env.CLOUDINARY_URL);
+  if (rawUrl.startsWith("cloudinary://")) {
+    try {
+      const parsed = new URL(rawUrl);
+      const uName = decodeURIComponent(parsed.hostname || "");
+      const uKey = decodeURIComponent(parsed.username || "");
+      const uSecret = decodeURIComponent(parsed.password || "");
+      if (uName && uKey && uSecret) {
+        return { cloudName: uName, apiKey: uKey, apiSecret: uSecret };
+      }
+    } catch {
+    }
+  }
+  return null;
+}
 function isCloudinaryConfigured() {
-  return Boolean(
-    process.env.CLOUDINARY_CLOUD_NAME?.trim() && process.env.CLOUDINARY_API_KEY?.trim() && process.env.CLOUDINARY_API_SECRET?.trim()
-  );
+  return resolveCloudinaryCredentials() !== null;
 }
 function configureCloudinary() {
+  const creds = resolveCloudinaryCredentials();
+  if (!creds) return;
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: creds.cloudName,
+    api_key: creds.apiKey,
+    api_secret: creds.apiSecret,
     secure: true
   });
+}
+var ImageUploadValidationError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ImageUploadValidationError";
+  }
+};
+var ImageStorageError = class extends Error {
+  constructor(message, statusCode = 502) {
+    super(message);
+    this.name = "ImageStorageError";
+    this.statusCode = statusCode;
+  }
+};
+function extractCloudinaryErrorMessage(err) {
+  if (err instanceof Error && err.message) return err.message;
+  if (err && typeof err === "object") {
+    const obj = err;
+    if (obj.error?.message) return obj.error.message;
+    if (obj.message) return obj.message;
+  }
+  return "Cloudinary image upload failed.";
 }
 function detectImageFormatFromMagicBytes(buf) {
   if (buf.length < 12) return null;
@@ -653,14 +716,16 @@ function parseImageDimensions(buf, format) {
 }
 function validateUploadedImage(buffer, mimetype) {
   if (!ALLOWED_MIME_TYPES.has(mimetype.toLowerCase())) {
-    throw new Error("Only JPEG, PNG, and WebP images are allowed.");
+    throw new ImageUploadValidationError("Only JPEG, PNG, and WebP images are allowed.");
   }
   if (buffer.length === 0 || buffer.length > MAX_IMAGE_BYTES) {
-    throw new Error("Image size must be between 1 byte and 5 MB.");
+    throw new ImageUploadValidationError("Image size must be between 1 byte and 5 MB.");
   }
   const detected = detectImageFormatFromMagicBytes(buffer);
   if (!detected) {
-    throw new Error("Invalid image file contents. Please upload a real JPEG, PNG, or WebP file.");
+    throw new ImageUploadValidationError(
+      "Invalid image file contents. Please upload a real JPEG, PNG, or WebP file."
+    );
   }
   const dims = parseImageDimensions(buffer, detected);
   return {
@@ -675,32 +740,50 @@ async function storeImageBuffer(buffer, mimetype, folder = "our-little-space/not
   const uploadedAt = (/* @__PURE__ */ new Date()).toISOString();
   if (isCloudinaryConfigured()) {
     configureCloudinary();
-    const result = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder,
-          resource_type: "image",
-          allowed_formats: ["jpg", "jpeg", "png", "webp"]
-        },
-        (error, res) => {
-          if (error || !res) {
-            reject(error || new Error("Cloudinary upload failed"));
-            return;
+    try {
+      const result = await new Promise((resolve, reject) => {
+        let settled = false;
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder,
+            resource_type: "image",
+            allowed_formats: ["jpg", "jpeg", "png", "webp"],
+            timeout: 15e3
+          },
+          (error, res) => {
+            if (settled) return;
+            settled = true;
+            if (error || !res) {
+              reject(error || new Error("Cloudinary upload failed"));
+              return;
+            }
+            resolve(res);
           }
-          resolve(res);
-        }
+        );
+        stream.on("error", (streamErr) => {
+          if (settled) return;
+          settled = true;
+          reject(streamErr);
+        });
+        stream.end(buffer);
+      });
+      return {
+        id,
+        cloudinaryPublicId: result.public_id,
+        secureUrl: result.secure_url,
+        width: result.width || width,
+        height: result.height || height,
+        format: result.format || format,
+        uploadedAt
+      };
+    } catch (err) {
+      const msg = extractCloudinaryErrorMessage(err);
+      console.error("[cloudinary-upload-error]", { folder, message: msg });
+      throw new ImageStorageError(
+        "Could not store image on media server. Please verify Cloudinary configuration or try a smaller image.",
+        502
       );
-      stream.end(buffer);
-    });
-    return {
-      id,
-      cloudinaryPublicId: result.public_id,
-      secureUrl: result.secure_url,
-      width: result.width || width,
-      height: result.height || height,
-      format: result.format || format,
-      uploadedAt
-    };
+    }
   }
   fs.mkdirSync(LOCAL_MEDIA_DIR, { recursive: true });
   const filename = `${id}.${format}`;
@@ -843,6 +926,18 @@ function toPublicUser(u) {
     createdAt: u.createdAt
   };
 }
+function toIsoTimestamp(value, fallback) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+  }
+  return fallback ?? (/* @__PURE__ */ new Date()).toISOString();
+}
 function mongoUserToRecord(doc) {
   return {
     id: doc._id,
@@ -855,7 +950,7 @@ function mongoUserToRecord(doc) {
     bio: doc.bio || "",
     role: doc.role,
     appearance: normalizeAppearance(doc.appearance),
-    createdAt: doc.createdAt.toISOString()
+    createdAt: toIsoTimestamp(doc.createdAt)
   };
 }
 function mongoNoteToRecord(doc) {
@@ -865,20 +960,20 @@ function mongoNoteToRecord(doc) {
     authorId: doc.authorId,
     content: doc.content,
     tone: doc.tone,
-    images: doc.images.map((img) => ({
+    images: (doc.images || []).map((img) => ({
       id: img.id,
       cloudinaryPublicId: img.cloudinaryPublicId,
       secureUrl: img.secureUrl,
       width: img.width,
       height: img.height,
       format: img.format,
-      uploadedAt: img.uploadedAt.toISOString()
+      uploadedAt: toIsoTimestamp(img.uploadedAt)
     })),
     sticker: doc.sticker,
-    createdAt: doc.createdAt.toISOString(),
-    updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : null,
-    deletedAt: doc.deletedAt ? doc.deletedAt.toISOString() : null,
-    isDeleted: doc.isDeleted
+    createdAt: toIsoTimestamp(doc.createdAt),
+    updatedAt: doc.updatedAt ? toIsoTimestamp(doc.updatedAt) : null,
+    deletedAt: doc.deletedAt ? toIsoTimestamp(doc.deletedAt) : null,
+    isDeleted: Boolean(doc.isDeleted)
   };
 }
 function hydrateNote(note, usersMap) {
@@ -1635,8 +1730,8 @@ function mongoComplimentToRecord(doc) {
     recipientId: doc.recipientId,
     content: doc.content,
     category: doc.category,
-    createdAt: doc.createdAt.toISOString(),
-    isDeleted: doc.isDeleted
+    createdAt: toIsoTimestamp(doc.createdAt),
+    isDeleted: Boolean(doc.isDeleted)
   };
 }
 function mongoDrawToRecord(doc) {
@@ -1645,8 +1740,8 @@ function mongoDrawToRecord(doc) {
     spaceId: doc.spaceId || DEFAULT_SPACE_ID,
     complimentId: doc.complimentId,
     recipientId: doc.recipientId,
-    drawnAt: doc.drawnAt.toISOString(),
-    cycleNumber: doc.cycleNumber
+    drawnAt: toIsoTimestamp(doc.drawnAt),
+    cycleNumber: typeof doc.cycleNumber === "number" ? doc.cycleNumber : 1
   };
 }
 function hydrateCompliment(c, usersMap) {
@@ -2035,13 +2130,26 @@ function asyncHandler(fn) {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 }
-function respondWithServerError(res, err, fallbackMessage) {
+function respondWithServerError(res, err, fallbackMessage, context) {
   if (err instanceof DatabaseConnectionError) {
+    console.error("[api-db-error]", {
+      method: context?.method || res.req?.method,
+      route: context?.route || res.req?.originalUrl || res.req?.path,
+      operation: context?.operation,
+      status: 503,
+      code: err.code
+    });
     res.status(503).json({ error: err.message });
     return;
   }
   const safeName = err instanceof Error ? err.name : "UnknownError";
-  console.error("[api-error]", safeName, fallbackMessage);
+  console.error("[api-error]", {
+    method: context?.method || res.req?.method,
+    route: context?.route || res.req?.originalUrl || res.req?.path,
+    operation: context?.operation,
+    status: 500,
+    name: safeName
+  });
   res.status(500).json({ error: fallbackMessage });
 }
 function verifyCsrf(req, res, next) {
@@ -2580,8 +2688,24 @@ function createApiRouter() {
         }
         res.status(201).json({ images: uploaded });
       } catch (err) {
-        res.status(400).json({
-          error: err instanceof Error ? err.message : "Image upload failed."
+        if (err instanceof ImageUploadValidationError) {
+          res.status(400).json({ error: err.message });
+          return;
+        }
+        if (err instanceof ImageStorageError) {
+          console.error("[api-upload-error]", {
+            method: req.method,
+            route: req.originalUrl,
+            purpose: req.query.purpose === "theme" ? "theme" : "notes",
+            status: err.statusCode
+          });
+          res.status(err.statusCode).json({ error: err.message });
+          return;
+        }
+        respondWithServerError(res, err, "Image upload failed.", {
+          method: req.method,
+          route: req.originalUrl,
+          operation: "uploadImages"
         });
       }
     })
@@ -2702,11 +2826,22 @@ function createApp() {
       return;
     }
     if (err instanceof DatabaseConnectionError) {
+      console.error("[server-db-error]", {
+        method: req.method,
+        path: req.originalUrl || req.path,
+        status: 503,
+        code: err.code
+      });
       res.status(503).json({ error: err.message });
       return;
     }
     const safeName = err instanceof Error ? err.name : "UnknownError";
-    console.error("[server-error]", { method: req.method, path: req.path, name: safeName });
+    console.error("[server-error]", {
+      method: req.method,
+      path: req.originalUrl || req.path,
+      status: 500,
+      name: safeName
+    });
     res.status(500).json({ error: "Unexpected server error. Please try again." });
   });
   return app2;
@@ -2714,24 +2849,52 @@ function createApp() {
 
 // src/server/vercelEntry.ts
 var app = createApp();
-function handler(req, res) {
-  const rawUrl = req.url || "/";
-  const parsed = new URL(rawUrl, "http://localhost");
+function normalizeVercelRequestUrl(rawUrl) {
+  const safeRaw = rawUrl && rawUrl.startsWith("/") ? rawUrl : `/${rawUrl || ""}`;
+  const parsed = new URL(safeRaw, "http://localhost");
   const rewrittenPath = parsed.searchParams.get("__vercel_path");
   if (rewrittenPath !== null) {
     parsed.searchParams.delete("__vercel_path");
     const qs = parsed.searchParams.toString();
     const clean = rewrittenPath.replace(/^\/+/, "");
     if (clean === "robots.txt" || clean === "sitemap.xml") {
-      req.url = `/${clean}${qs ? `?${qs}` : ""}`;
-    } else if (parsed.pathname === "/api" || parsed.pathname === "/api/index") {
-      req.url = `/api/${clean}${qs ? `?${qs}` : ""}`;
-    } else {
-      req.url = `${parsed.pathname}${qs ? `?${qs}` : ""}`;
+      return `/${clean}${qs ? `?${qs}` : ""}`;
     }
+    if (parsed.pathname === "/api" || parsed.pathname === "/api/index") {
+      return clean ? `/api/${clean}${qs ? `?${qs}` : ""}` : `/api${qs ? `?${qs}` : ""}`;
+    }
+    return `${parsed.pathname}${qs ? `?${qs}` : ""}`;
   }
-  app(req, res);
+  return `${parsed.pathname}${parsed.search}`;
+}
+function handler(req, res) {
+  req.url = normalizeVercelRequestUrl(req.url);
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    res.once("finish", finish);
+    res.once("close", finish);
+    try {
+      app(req, res);
+    } catch (err) {
+      const safeName = err instanceof Error ? err.name : "UnknownError";
+      console.error("[vercel-entry-error]", { url: req.url, method: req.method, name: safeName });
+      if (!res.headersSent) {
+        res.statusCode = 500;
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.end(JSON.stringify({ error: "Unexpected server error. Please try again." }));
+      } else if (!res.writableEnded) {
+        res.end();
+      }
+      finish();
+    }
+  });
 }
 export {
-  handler as default
+  handler as default,
+  normalizeVercelRequestUrl
 };

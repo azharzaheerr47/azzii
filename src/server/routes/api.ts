@@ -53,6 +53,8 @@ import {
 } from '../db/store';
 import {
   deleteStoredImage,
+  ImageStorageError,
+  ImageUploadValidationError,
   pingCloudinary,
   resolveSafeLocalMediaPath,
   storeImageBuffer,
@@ -111,13 +113,31 @@ function asyncHandler(
   };
 }
 
-function respondWithServerError(res: Response, err: unknown, fallbackMessage: string): void {
+function respondWithServerError(
+  res: Response,
+  err: unknown,
+  fallbackMessage: string,
+  context?: { method?: string; route?: string; operation?: string },
+): void {
   if (err instanceof DatabaseConnectionError) {
+    console.error('[api-db-error]', {
+      method: context?.method || res.req?.method,
+      route: context?.route || res.req?.originalUrl || res.req?.path,
+      operation: context?.operation,
+      status: 503,
+      code: err.code,
+    });
     res.status(503).json({ error: err.message });
     return;
   }
   const safeName = err instanceof Error ? err.name : 'UnknownError';
-  console.error('[api-error]', safeName, fallbackMessage);
+  console.error('[api-error]', {
+    method: context?.method || res.req?.method,
+    route: context?.route || res.req?.originalUrl || res.req?.path,
+    operation: context?.operation,
+    status: 500,
+    name: safeName,
+  });
   res.status(500).json({ error: fallbackMessage });
 }
 
@@ -736,8 +756,24 @@ export function createApiRouter(): express.Router {
         }
         res.status(201).json({ images: uploaded });
       } catch (err) {
-        res.status(400).json({
-          error: err instanceof Error ? err.message : 'Image upload failed.',
+        if (err instanceof ImageUploadValidationError) {
+          res.status(400).json({ error: err.message });
+          return;
+        }
+        if (err instanceof ImageStorageError) {
+          console.error('[api-upload-error]', {
+            method: req.method,
+            route: req.originalUrl,
+            purpose: req.query.purpose === 'theme' ? 'theme' : 'notes',
+            status: err.statusCode,
+          });
+          res.status(err.statusCode).json({ error: err.message });
+          return;
+        }
+        respondWithServerError(res, err, 'Image upload failed.', {
+          method: req.method,
+          route: req.originalUrl,
+          operation: 'uploadImages',
         });
       }
     }),

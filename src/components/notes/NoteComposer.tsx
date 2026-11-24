@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Send, Smile, X } from 'lucide-react';
+import { prepareImageForUpload, validateImageFileCandidate } from '../../lib/imageUploadPrep';
 import type { NoteImage, NoteTone, SharedNote, StickerId } from '../../types/index';
 import { api } from '../../utils/apiClient';
 import { StickerArtwork, StickerPicker, getStickerLabel } from '../artwork/StickerCollection';
@@ -69,17 +70,12 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
     }
 
     const batch = selected.slice(0, remainingSlots);
-    const invalid = batch.find(
-      (f) => !['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(f.type),
-    );
-    if (invalid) {
-      showToast('Only JPEG, PNG, and WebP images are supported.', 'error');
-      return;
-    }
-    const oversized = batch.find((f) => f.size > 5 * 1024 * 1024);
-    if (oversized) {
-      showToast('Each image must be 5 MB or smaller.', 'error');
-      return;
+    for (const file of batch) {
+      const check = validateImageFileCandidate(file);
+      if (!check.valid) {
+        showToast(check.error, 'error');
+        return;
+      }
     }
 
     const newItems: PendingPreview[] = batch.map((file) => ({
@@ -94,7 +90,10 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
     setErrorMsg(null);
 
     try {
-      const uploaded = await api.uploadImages(batch, (pct) => setUploadProgress(pct));
+      const preparedFiles = await Promise.all(
+        batch.map((f) => prepareImageForUpload(f, { maxBytes: 1.8 * 1024 * 1024 })),
+      );
+      const uploaded = await api.uploadImages(preparedFiles, (pct) => setUploadProgress(pct));
       setPreviews((prev) =>
         prev.map((item) => {
           const idx = newItems.findIndex((n) => n.localId === item.localId);

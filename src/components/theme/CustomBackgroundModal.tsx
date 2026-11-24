@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Trash2, Upload, X } from 'lucide-react';
+import { prepareImageForUpload, validateImageFileCandidate } from '../../lib/imageUploadPrep';
 import {
   DEFAULT_CUSTOM_BACKGROUND_SETTINGS,
   buildCustomBackgroundImageStyle,
@@ -48,11 +49,13 @@ export const CustomBackgroundModal: React.FC<CustomBackgroundModalProps> = ({
   const [draft, setDraft] = useState<CustomBackgroundConfig | null>(initialConfig);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     if (open) {
       setDraft(initialConfig);
+      setUploadError(null);
       unsavedPublicIdsRef.current = [];
     }
   }, [open, initialConfig]);
@@ -99,20 +102,24 @@ export const CustomBackgroundModal: React.FC<CustomBackgroundModalProps> = ({
   };
 
   const handleFileUpload = async (file: File) => {
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowed.includes(file.type.toLowerCase())) {
-      showToast('Please select a JPEG, PNG, or WebP photo.', 'error');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Background photo must be 5 MB or smaller.', 'error');
+    const check = validateImageFileCandidate(file);
+    if (!check.valid) {
+      setUploadError(check.error);
+      showToast(check.error, 'error');
       return;
     }
 
+    setUploadError(null);
     setUploading(true);
-    setUploadProgress(15);
+    setUploadProgress(10);
     try {
-      const uploaded = await api.uploadImages([file], (pct) => setUploadProgress(pct), 'theme');
+      const prepared = await prepareImageForUpload(file);
+      setUploadProgress(20);
+      const uploaded = await api.uploadImages(
+        [prepared],
+        (pct) => setUploadProgress(Math.max(20, pct)),
+        'theme',
+      );
       const item = uploaded[0];
       if (!item) throw new Error('Upload did not return a photo URL.');
 
@@ -133,7 +140,9 @@ export const CustomBackgroundModal: React.FC<CustomBackgroundModalProps> = ({
       onLivePreview(nextConfig);
       showToast('Photo uploaded. Adjust framing & readability below.', 'success');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to upload photo.', 'error');
+      const msg = err instanceof Error ? err.message : 'Failed to upload photo.';
+      setUploadError(msg);
+      showToast(msg, 'error');
     } finally {
       setUploading(false);
       setUploadProgress(null);
@@ -233,8 +242,16 @@ export const CustomBackgroundModal: React.FC<CustomBackgroundModalProps> = ({
               Drop a photo here, or choose from your device
             </p>
             <p className="mt-1 text-xs text-[var(--text-muted)]">
-              Supports JPEG, PNG, and WebP up to 5 MB · Stored securely just for your view
+              Supports JPEG, PNG, and WebP · Automatically optimized for fast upload
             </p>
+            {uploadError && (
+              <p
+                role="alert"
+                className="mt-3 max-w-md mx-auto rounded-xl border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3.5 py-2 text-xs text-[var(--danger-text)]"
+              >
+                {uploadError}
+              </p>
+            )}
             {uploadProgress !== null ? (
               <div className="mt-4 max-w-xs mx-auto space-y-1.5">
                 <div className="h-1.5 w-full rounded-full bg-[var(--accent-soft)] overflow-hidden">
@@ -474,6 +491,15 @@ export const CustomBackgroundModal: React.FC<CustomBackgroundModalProps> = ({
               </div>
             </div>
           </div>
+        )}
+
+        {draft && uploadError && (
+          <p
+            role="alert"
+            className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3.5 py-2 text-xs text-[var(--danger-text)]"
+          >
+            {uploadError}
+          </p>
         )}
 
         {/* Footer Actions */}

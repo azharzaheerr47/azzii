@@ -612,10 +612,148 @@ test('Vercel serverless Express handler serves API, rewrites, JSON errors, 503 o
     });
     assert.equal(resetThemeRes.status, 200);
     assert.equal(fs.existsSync(localBg1File), false);
+
+    // 12. Vercel __vercel_path rewrite parity for Compliments Jar, Custom Theme Upload, and Romantic Mode
+    const rewriteCompRes = await fetch(`${baseUrl}/api?__vercel_path=compliments`, {
+      headers: { Authorization: `Bearer ${space2Partner.sessionToken}` },
+    });
+    assert.equal(rewriteCompRes.status, 200);
+    const rewriteCompJson = (await rewriteCompRes.json()) as { totalInJarForMe: number };
+    assert.equal(rewriteCompJson.totalInJarForMe, 2);
+
+    const rewriteRomanticOff = await fetch(`${baseUrl}/api?__vercel_path=profile/appearance`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Partner.sessionToken}`,
+      },
+      body: JSON.stringify({
+        themeMode: 'dark',
+        romanticMode: false,
+        customBackground: null,
+      }),
+    });
+    assert.equal(rewriteRomanticOff.status, 200);
+    const rewriteRomanticJson = (await rewriteRomanticOff.json()) as {
+      user: { appearance: { themeMode: string; romanticMode: boolean } };
+    };
+    assert.equal(rewriteRomanticJson.user.appearance.themeMode, 'dark');
+    assert.equal(rewriteRomanticJson.user.appearance.romanticMode, false);
+
+    // Theme upload via __vercel_path=upload&purpose=theme rewrite preserves query params
+    const form2 = new FormData();
+    form2.append('images', new Blob([tinyPng], { type: 'image/png' }), 'bg2.png');
+    const rewriteUploadRes = await fetch(`${baseUrl}/api?__vercel_path=upload&purpose=theme`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Partner.sessionToken}`,
+      },
+      body: form2,
+    });
+    assert.equal(rewriteUploadRes.status, 201);
+    const rewriteUploadJson = (await rewriteUploadRes.json()) as {
+      images: Array<{ secureUrl: string; cloudinaryPublicId: string }>;
+    };
+    assert.equal(rewriteUploadJson.images.length, 1);
+
+    // Invalid fake image upload rejected cleanly with 400 JSON
+    const badForm = new FormData();
+    badForm.append('images', new Blob(['not-an-image'], { type: 'image/png' }), 'fake.png');
+    const badUploadRes = await fetch(`${baseUrl}/api/upload?purpose=theme`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        Authorization: `Bearer ${space2Partner.sessionToken}`,
+      },
+      body: badForm,
+    });
+    assert.equal(badUploadRes.status, 400);
+
+    // Unauthenticated requests to Compliment Jar, Upload, and Appearance return 401 JSON
+    const [unauthComp, unauthUpload, unauthAppearance] = await Promise.all([
+      fetch(`${baseUrl}/api/compliments`),
+      fetch(`${baseUrl}/api/upload?purpose=theme`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      }),
+      fetch(`${baseUrl}/api/profile/appearance`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ themeMode: 'system', romanticMode: true, customBackground: null }),
+      }),
+    ]);
+    assert.equal(unauthComp.status, 401);
+    assert.equal(unauthUpload.status, 401);
+    assert.equal(unauthAppearance.status, 401);
+
+    // VERCEL=1 without MONGODB_URI fails with structured 503 JSON on Compliments Jar & Appearance
+    process.env.VERCEL = '1';
+    delete process.env.MONGODB_URI;
+    try {
+      const [noDbComp, noDbApp] = await Promise.all([
+        fetch(`${baseUrl}/api/compliments`, {
+          headers: { Authorization: `Bearer ${space2Partner.sessionToken}` },
+        }),
+        fetch(`${baseUrl}/api/profile/appearance`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            Authorization: `Bearer ${space2Partner.sessionToken}`,
+          },
+          body: JSON.stringify({ themeMode: 'system', romanticMode: true, customBackground: null }),
+        }),
+      ]);
+      assert.equal(noDbComp.status, 503);
+      assert.equal(noDbApp.status, 503);
+    } finally {
+      if (prevVercel === undefined) delete process.env.VERCEL;
+      else process.env.VERCEL = prevVercel;
+      if (prevUri !== undefined) process.env.MONGODB_URI = prevUri;
+    }
   } finally {
     fs.rmSync(TEMP_DB, { recursive: true, force: true });
     await new Promise<void>((resolve, reject) =>
       server.close((err) => (err ? reject(err) : resolve())),
     );
+  }
+});
+
+test('isCloudinaryConfigured supports both split env vars and CLOUDINARY_URL', async () => {
+  const { isCloudinaryConfigured } = await import('./media/imageService');
+  const prevName = process.env.CLOUDINARY_CLOUD_NAME;
+  const prevKey = process.env.CLOUDINARY_API_KEY;
+  const prevSecret = process.env.CLOUDINARY_API_SECRET;
+  const prevUrl = process.env.CLOUDINARY_URL;
+
+  try {
+    delete process.env.CLOUDINARY_CLOUD_NAME;
+    delete process.env.CLOUDINARY_API_KEY;
+    delete process.env.CLOUDINARY_API_SECRET;
+    delete process.env.CLOUDINARY_URL;
+    assert.equal(isCloudinaryConfigured(), false);
+
+    process.env.CLOUDINARY_URL = 'cloudinary://123456:mysecret@mycloud';
+    assert.equal(isCloudinaryConfigured(), true);
+
+    delete process.env.CLOUDINARY_URL;
+    process.env.CLOUDINARY_CLOUD_NAME = '"mycloud"';
+    process.env.CLOUDINARY_API_KEY = '123456';
+    process.env.CLOUDINARY_API_SECRET = 'mysecret';
+    assert.equal(isCloudinaryConfigured(), true);
+  } finally {
+    if (prevName === undefined) delete process.env.CLOUDINARY_CLOUD_NAME;
+    else process.env.CLOUDINARY_CLOUD_NAME = prevName;
+    if (prevKey === undefined) delete process.env.CLOUDINARY_API_KEY;
+    else process.env.CLOUDINARY_API_KEY = prevKey;
+    if (prevSecret === undefined) delete process.env.CLOUDINARY_API_SECRET;
+    else process.env.CLOUDINARY_API_SECRET = prevSecret;
+    if (prevUrl === undefined) delete process.env.CLOUDINARY_URL;
+    else process.env.CLOUDINARY_URL = prevUrl;
   }
 });

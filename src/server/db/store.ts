@@ -209,6 +209,19 @@ function toPublicUser(u: StoredUserRecord): PublicUser {
   };
 }
 
+function toIsoTimestamp(value: Date | string | null | undefined, fallback?: string): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+  }
+  return fallback ?? new Date().toISOString();
+}
+
 function mongoUserToRecord(doc: IUserDoc): StoredUserRecord {
   return {
     id: doc._id,
@@ -221,7 +234,7 @@ function mongoUserToRecord(doc: IUserDoc): StoredUserRecord {
     bio: doc.bio || '',
     role: doc.role,
     appearance: normalizeAppearance(doc.appearance),
-    createdAt: doc.createdAt.toISOString(),
+    createdAt: toIsoTimestamp(doc.createdAt),
   };
 }
 
@@ -232,20 +245,20 @@ function mongoNoteToRecord(doc: INoteDoc): StoredNoteRecord {
     authorId: doc.authorId,
     content: doc.content,
     tone: doc.tone,
-    images: doc.images.map((img) => ({
+    images: (doc.images || []).map((img) => ({
       id: img.id,
       cloudinaryPublicId: img.cloudinaryPublicId,
       secureUrl: img.secureUrl,
       width: img.width,
       height: img.height,
       format: img.format,
-      uploadedAt: img.uploadedAt.toISOString(),
+      uploadedAt: toIsoTimestamp(img.uploadedAt),
     })),
     sticker: doc.sticker,
-    createdAt: doc.createdAt.toISOString(),
-    updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : null,
-    deletedAt: doc.deletedAt ? doc.deletedAt.toISOString() : null,
-    isDeleted: doc.isDeleted,
+    createdAt: toIsoTimestamp(doc.createdAt),
+    updatedAt: doc.updatedAt ? toIsoTimestamp(doc.updatedAt) : null,
+    deletedAt: doc.deletedAt ? toIsoTimestamp(doc.deletedAt) : null,
+    isDeleted: Boolean(doc.isDeleted),
   };
 }
 
@@ -1186,8 +1199,8 @@ function mongoComplimentToRecord(doc: IComplimentDoc): StoredComplimentRecord {
     recipientId: doc.recipientId,
     content: doc.content,
     category: doc.category,
-    createdAt: doc.createdAt.toISOString(),
-    isDeleted: doc.isDeleted,
+    createdAt: toIsoTimestamp(doc.createdAt),
+    isDeleted: Boolean(doc.isDeleted),
   };
 }
 
@@ -1197,8 +1210,8 @@ function mongoDrawToRecord(doc: IComplimentDrawDoc): StoredComplimentDrawRecord 
     spaceId: doc.spaceId || DEFAULT_SPACE_ID,
     complimentId: doc.complimentId,
     recipientId: doc.recipientId,
-    drawnAt: doc.drawnAt.toISOString(),
-    cycleNumber: doc.cycleNumber,
+    drawnAt: toIsoTimestamp(doc.drawnAt),
+    cycleNumber: typeof doc.cycleNumber === 'number' ? doc.cycleNumber : 1,
   };
 }
 

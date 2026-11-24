@@ -257,11 +257,28 @@ export class DatabaseConnectionError extends Error {
   }
 }
 
+let listenersAttached = false;
+
 export async function connectMongoDB(uri: string): Promise<typeof mongoose> {
   if (!globalWithMongoose.__mongooseCache) {
     globalWithMongoose.__mongooseCache = { conn: null, promise: null };
   }
   const cache = globalWithMongoose.__mongooseCache;
+
+  if (!listenersAttached) {
+    listenersAttached = true;
+    mongoose.connection.on('disconnected', () => {
+      cache.conn = null;
+      cache.promise = null;
+    });
+    mongoose.connection.on('error', (err) => {
+      cache.conn = null;
+      cache.promise = null;
+      const safeName = err instanceof Error ? err.name : 'MongoError';
+      console.error('[mongodb] Connection error event:', safeName);
+    });
+  }
+
   if (cache.conn && mongoose.connection.readyState === 1) {
     return cache.conn;
   }
@@ -276,6 +293,8 @@ export async function connectMongoDB(uri: string): Promise<typeof mongoose> {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
         connectTimeoutMS: 5000,
+        socketTimeoutMS: 8000,
+        maxIdleTimeMS: 30000,
       })
       .catch((err) => {
         cache.conn = null;

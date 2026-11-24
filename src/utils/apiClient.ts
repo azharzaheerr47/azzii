@@ -71,12 +71,22 @@ function defaultHttpErrorMessage(status: number, method: string, endpoint: strin
   }
 }
 
+const REQUEST_TIMEOUT_MS = 20_000;
+const UPLOAD_TIMEOUT_MS = 35_000;
+
 async function requestJson<T>(url: string, options: RequestInit = {}): Promise<T> {
   const method = (options.method || 'GET').toUpperCase();
+  const controller = new AbortController();
+  const timeoutId =
+    typeof window !== 'undefined'
+      ? window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+      : setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   let res: Response;
   try {
     res = await fetch(url, {
       ...options,
+      signal: options.signal ?? controller.signal,
       credentials: 'include',
       headers: {
         ...BASE_HEADERS,
@@ -85,18 +95,32 @@ async function requestJson<T>(url: string, options: RequestInit = {}): Promise<T
         ...(options.headers || {}),
       },
     });
-  } catch {
+  } catch (err) {
+    const isAbort =
+      err instanceof Error && (err.name === 'AbortError' || err.message.includes('aborted'));
     throw new ApiRequestError(
-      'Unable to reach the server. Check your internet connection and verify the app URL is reachable.',
+      isAbort
+        ? 'The server took too long to respond. Please check your connection and try again.'
+        : 'Unable to reach the server. Check your internet connection and verify the app URL is reachable.',
       { status: null, kind: 'network', method, endpoint: url },
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const contentType = res.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
-  const rawText = await res.text();
-  let data: Record<string, unknown> | null = null;
+  let rawText = '';
+  try {
+    rawText = await res.text();
+  } catch {
+    throw new ApiRequestError(
+      `Connection interrupted while reading response from ${method} ${url}. Please try again.`,
+      { status: res.status || null, kind: 'network', method, endpoint: url },
+    );
+  }
 
+  let data: Record<string, unknown> | null = null;
   if (rawText) {
     try {
       data = JSON.parse(rawText) as Record<string, unknown>;
@@ -314,6 +338,7 @@ export const api = {
     purpose: 'notes' | 'theme' = 'notes',
   ): Promise<NoteImage[]> => {
     return new Promise((resolve, reject) => {
+      const totalBytes = files.reduce((sum, f) => sum + (f.size || 0), 0);
       const formData = new FormData();
       for (const file of files) {
         formData.append('images', file);
@@ -322,6 +347,7 @@ export const api = {
       const xhr = new XMLHttpRequest();
       const targetUrl = purpose === 'theme' ? '/api/upload?purpose=theme' : '/api/upload';
       xhr.open('POST', targetUrl);
+      xhr.timeout = UPLOAD_TIMEOUT_MS;
       xhr.withCredentials = true;
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       if (memorySessionToken) {
@@ -343,19 +369,69 @@ export const api = {
           );
           return;
         }
-        try {
-          const parsed = JSON.parse(xhr.responseText || '{}');
-          if (xhr.status >= 200 && xhr.status < 300 && Array.isArray(parsed.images)) {
-            resolve(parsed.images as NoteImage[]);
-          } else {
-            reject(new Error(parsed.error || `Upload failed (${xhr.status})`));
-          }
-        } catch {
-          reject(new Error('Invalid upload response from server.'));
+        if (xhr.status === 401) {
+          reject(new Error('Your session has expired. Please sign in again and retry.'));
+          return;
         }
+        let parsed: Record<string, unknown> | null = null;
+        try {
+          parsed = JSON.parse(xhr.responseText || '{}') as Record<string, unknown>;
+        } catch {
+          parsed = null;
+        }
+
+        if (xhr.status >= 200 && xhr.status < 300 && parsed && Array.isArray(parsed.images)) {
+          resolve(parsed.images as NoteImage[]);
+          return;
+        }
+
+        const serverError = parsed && typeof parsed.error === 'string' ? parsed.error : null;
+        if (serverError) {
+          reject(new Error(serverError));
+          return;
+        }
+        if (xhr.status >= 500) {
+          reject(
+            new Error(
+              `Image upload server error (HTTP ${xhr.status}). Verify Cloudinary environment variables and deployment logs.`,
+            ),
+          );
+          return;
+        }
+        if (!parsed) {
+          reject(
+            new Error(
+              `Unexpected server response during image upload (HTTP ${xhr.status}). Verify Vercel /api/upload routing.`,
+            ),
+          );
+          return;
+        }
+        reject(new Error(`Upload failed (HTTP ${xhr.status}).`));
       };
 
-      xhr.onerror = () => reject(new Error('Network error while uploading images.'));
+      xhr.ontimeout = () => {
+        reject(
+          new Error(
+            'Image upload timed out before the server responded. Please check your connection or try a smaller photo.',
+          ),
+        );
+      };
+
+      xhr.onerror = () => {
+        if (totalBytes > 4 * 1024 * 1024) {
+          reject(
+            new Error(
+              'Upload connection was reset because the image payload exceeded the 4 MB serverless limit. Please choose a smaller photo.',
+            ),
+          );
+          return;
+        }
+        reject(
+          new Error(
+            'Unable to reach the upload server. Check your internet connection and verify /api/upload is reachable.',
+          ),
+        );
+      };
       xhr.send(formData);
     });
   },

@@ -32,6 +32,7 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
 
   const [overview, setOverview] = useState<ComplimentsOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [revealed, setRevealed] = useState<ComplimentDrawResult | null>(null);
 
@@ -47,11 +48,14 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
   const [deleting, setDeleting] = useState(false);
 
   const loadOverview = useCallback(async () => {
+    setLoadError(null);
     try {
       const data = await api.listCompliments();
       setOverview(data);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not load compliments jar.', 'error');
+      const msg = err instanceof Error ? err.message : 'Could not load compliments jar.';
+      setLoadError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -170,6 +174,13 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
             <div className="mt-3 space-y-1">
               {loading ? (
                 <p className="text-xs text-[var(--text-muted)]">Checking what is inside your jar...</p>
+              ) : loadError && !overview ? (
+                <div role="alert" className="space-y-2 max-w-xs mx-auto">
+                  <p className="font-display text-sm font-semibold text-[var(--danger-text)]">
+                    Could not open your jar right now
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">{loadError}</p>
+                </div>
               ) : totalWaiting === 0 ? (
                 <>
                   <p className="font-display text-sm font-semibold text-[var(--text-primary)]">
@@ -193,15 +204,29 @@ export const ComplimentsJarPage: React.FC<ComplimentsJarPageProps> = ({
             </div>
 
             <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                disabled={picking || loading || totalWaiting === 0}
-                onClick={handlePickNote}
-                className="min-h-[44px] inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--jar-btn-bg)] hover:bg-[var(--jar-btn-hover)] text-[var(--jar-btn-text)] text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>{picking ? 'Opening a note...' : 'Pick a little note'}</span>
-              </button>
+              {loadError && !overview ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoading(true);
+                    void loadOverview();
+                  }}
+                  className="min-h-[44px] inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--accent-on-primary)] text-sm font-semibold transition-colors shadow-xs"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Try again</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={picking || loading || totalWaiting === 0}
+                  onClick={handlePickNote}
+                  className="min-h-[44px] inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--jar-btn-bg)] hover:bg-[var(--jar-btn-hover)] text-[var(--jar-btn-text)] text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>{picking ? 'Opening a note...' : 'Pick a little note'}</span>
+                </button>
+              )}
             </div>
           </div>
 
